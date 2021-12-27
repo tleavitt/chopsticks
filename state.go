@@ -25,7 +25,7 @@ type player struct {
     rh  int
 }
 
-func (p *player) isEliminated() int {
+func (p *player) isEliminated() bool {
 	return p.lh == 0 && p.rh == 0
 }
 
@@ -81,7 +81,7 @@ func (gs *gameState) incrementTurn() *gameState {
 }
 
 func (gs *gameState) toString() string {
-	fmt.Sprintf("%+v\n", gs)
+	return fmt.Sprintf("%+v\n", gs)
 }
 
 func (gs *gameState) print() {
@@ -104,8 +104,7 @@ func (gs *gameState) print() {
 // Makes a new gameastate
 func copyAndPlayTurn(gs *gameState, playerHand Hand, receiverHand Hand) (*gameState, error) {
 	gsCopy := *gs
-	gsCopy.playTurn()
-	return &gsCopy
+	return gsCopy.playTurn(playerHand, receiverHand)
 }
 
 // Note: mutates state

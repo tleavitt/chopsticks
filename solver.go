@@ -24,7 +24,6 @@ type playNode struct {
 
 func solveDfs(rootNode *playNode) *playNode {
   // If the game is over, determine the score and return
-  rootNode.gs = gs
   if (rootNode.gs.player1.isEliminated()) {
     rootNode.score = -1
     return rootNode
