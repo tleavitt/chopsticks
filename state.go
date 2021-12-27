@@ -43,6 +43,7 @@ func (p *player) setHand(h Hand, value int) *player {
 }
 
 type gameState struct {
+	// TODO: make these pointers?
 	player player
 	receiver player
 	turn Turn // Turn indicates who the player is vs the receiver
@@ -87,7 +88,6 @@ func (gs *gameState) print() {
 // Note: mutates state
 func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, error) {
 	playerVal := gs.player.getHand(playerHand)
-	fmt.Println(playerVal)
 	if (playerVal == 0) {
 		return gs, errors.New("illegalMove: attempted to play an eliminated hand")
 	}
@@ -96,12 +96,12 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 		return gs, errors.New("illegalMove: attempted to receive on an eliminated hand")
 	}
 	updatedReceiverVal := (receiverVal + playerVal) % NUM_FINGERS
-	fmt.Println(updatedReceiverVal)
 	gs.receiver.setHand(receiverHand, updatedReceiverVal)
-	fmt.Println(gs.receiver.getHand(receiverHand))
 	gs.incrementTurn()
 
-	gs.print()
+	if DEBUG {
+		gs.print()
+	}
 	return gs, nil
 }
 

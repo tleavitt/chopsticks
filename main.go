@@ -7,6 +7,8 @@ import (
   "github.com/urfave/cli"
 )
 
+const DEBUG bool = true
+
 func main() {
   app := cli.NewApp()
   app.Name = "chopsticks"
