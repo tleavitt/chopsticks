@@ -12,7 +12,10 @@ func main() {
   app.Name = "chopsticks"
   app.Usage = "lets play a game of chopsticks"
   app.Action = func(c *cli.Context) error {
-    gs := initGame()
+    var gs = initGame()
+    gs.print()
+    gsp, _  := gs.playTurn(Left, Left)
+    gs = *gsp
     gs.print()
     return nil
   }
