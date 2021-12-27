@@ -7,7 +7,7 @@ import (
 type Hand int8
 
 const (
-	Right Season = iota
+	Right Hand = iota
 	Left
 )
 
@@ -36,12 +36,12 @@ type gameState struct {
 }
 
 func (gs gameState) print() {
-	player1Dec string := "  "
-	player2Dec string := "  "
-	if gs.turn == 1 {
-		player1Dec := "=>"
+	var player1Dec string = "  "
+	var player2Dec string = "  "
+	if gs.turn == Player1 {
+		player1Dec = "=>"
 	} else {
-		player2Dec := "=>"
+		player2Dec = "=>"
 	}
 	fmt.Println("==================================")
 	fmt.Printf("==         %sPlayer 2           ==\n", player2Dec)
@@ -60,7 +60,7 @@ func initGame() gameState {
 	return gameState{
 		player{1, 1},	
 		player{1, 1},	
-		1
+		Player1,	
 	}	
 }
 
