@@ -1,7 +1,6 @@
 package main
 
 import (
-  "fmt"
   "log"
   "os"
 
@@ -10,10 +9,11 @@ import (
 
 func main() {
   app := cli.NewApp()
-  app.Name = "boom"
-  app.Usage = "make an explosive entrance"
+  app.Name = "chopsticks"
+  app.Usage = "lets play a game of chopsticks"
   app.Action = func(c *cli.Context) error {
-    fmt.Println("boom! I say!")
+    gs := initGame()
+    gs.print()
     return nil
   }
 
