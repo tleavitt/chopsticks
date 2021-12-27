@@ -81,7 +81,7 @@ func (gs *gameState) incrementTurn() *gameState {
 }
 
 func (gs *gameState) toString() string {
-	return fmt.Sprintf("%+v\n", gs)
+	return fmt.Sprintf("%+v", gs)
 }
 
 func (gs *gameState) print() {
@@ -102,9 +102,10 @@ func (gs *gameState) print() {
 }
 
 // Makes a new gameastate
-func copyAndPlayTurn(gs *gameState, playerHand Hand, receiverHand Hand) (*gameState, error) {
-	gsCopy := *gs
-	return gsCopy.playTurn(playerHand, receiverHand)
+func copyAndPlayTurn(gs gameState, playerHand Hand, receiverHand Hand) (*gameState, error) {
+	gsCopy := gs
+	result, err := gsCopy.playTurn(playerHand, receiverHand)
+	return result, err
 }
 
 // Note: mutates state

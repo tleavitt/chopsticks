@@ -7,7 +7,7 @@ import (
   "github.com/urfave/cli"
 )
 
-const DEBUG bool = true
+const DEBUG bool = false
 
 func main() {
   app := cli.NewApp()
@@ -18,6 +18,7 @@ func main() {
     gs.print()
     gsp, _  := gs.playTurn(Left, Left)
     gs = *gsp
+    solve(gsp)
     return nil
   }
 
