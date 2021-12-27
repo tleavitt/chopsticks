@@ -18,7 +18,6 @@ func main() {
     gs.print()
     gsp, _  := gs.playTurn(Left, Left)
     gs = *gsp
-    gs.print()
     return nil
   }
 

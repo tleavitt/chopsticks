@@ -85,6 +85,7 @@ func (gs *gameState) print() {
 	fmt.Println("==================================")
 }
 
+
 // Note: mutates state
 func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, error) {
 	playerVal := gs.player.getHand(playerHand)
