@@ -69,36 +69,60 @@ func runPlayerTurn(gs *gameState, curNode *playNode) (*gameState, *playNode, err
 
   normalizedPlayerMove := normalizeMove(playerMove, curNode.gs) 
   nodeAfterPlayer, okP := curNode.nextNodes[normalizedPlayerMove]
-  if DEBUG {
-    fmt.Printf("After player move: previous node: %s current node: %s, normalized move: %+v\n", curNode.toString(), nodeAfterPlayer.toString(), normalizedPlayerMove)
-  }
+  // NOTE: nodeAfterPlayer.gs and gsAfterPlayer may not be equal due to normalization differences, but they should
+  // be equal after normalizing
   if !okP {
     return gs, curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
+  }
+  if DEBUG {
+    normalizedGs, _, _ = gsAfterPlayer.copyAndNormalize()
+    if normalizedGs != nodeAfterPlayer.gs {
+      return gs, curNode, errors.New(Sprintf("Normalized GUI game state and solve tree game state do not match: %+v, %+v", normalizedGs, nodeAfterPlayer.gs))
+    }
+    fmt.Printf("%+v", nodeAfterPlayer)
+    fmt.Printf("After player move: previous node: %s current node: %s, normalized move: %+v\n", curNode.toString(), nodeAfterPlayer.toString(), normalizedPlayerMove)
   }
   gsAfterPlayer.prettyPrint()
   return gsAfterPlayer, nodeAfterPlayer, nil
 }
 
-func runComputerTurn(gs *gameState, curNode *playNode) (*gameState, *playNode, error) {
+func runComputerTurn(guiGs *gameState, curNode *playNode) (*gameState, *playNode, error) {
   // Computer move
-  // using curNode.gs should be ok? corresponds to previous game state before player turn. enforce that?
+  // Need to normalize the guiGs in order to map the best move onto the current GUI
+  gs, swappedPlayer1, swappedPlayer2 := guiGs.copyAndNormalize()
 
-  computerMove, _, errC := curNode.getBestMoveAndScore()
+  normalizedComputerMove, _, errC := curNode.getBestMoveAndScore()
   if errC != nil {
     return gs, curNode, errC
   }
+  // Denormalize the computer's move to display in the GUI
+  // NOTE: ASSUMES COMPUTER IS PLAYER 2
+  guiComputerMove := *normalizedComputerMove
+  if swapPlayer1 {
+    guiComputerMove.receiveHand = guiComputerMove.receiveHand.invert()
+  }
+  if swapPlayer2 {
+    guiComputerMove.playHand = guiComputerMove.playHand.invert()
+  }
 
-  fmt.Println("I'll play: " + computerMove.toString())
-  gsAfterComputer, err := gs.playTurn(computerMove.playHand, computerMove.receiveHand)
+  // Display the move in the GUI
+  fmt.Println("I'll play: " + guiComputerMove.toString())
+  gsAfterComputer, err := gs.playTurn(guiComputerMove.playHand, guiComputerMove.receiveHand)
   if err != nil {
     return gs, curNode, err
   }
-  nodeAfterComputer, okC := curNode.nextNodes[*computerMove]
-  if DEBUG {
-    fmt.Printf("After computer move: previous node: %s current node: %s, normalized move: %+v\n", curNode.toString(), nodeAfterComputer.toString(), *computerMove)
-  }
+
+  nodeAfterComputer, okC := curNode.nextNodes[*normalizedComputerMove]
   if !okC {
     return gs, curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))
+  }
+  if DEBUG {
+    normalizedGs, _, _ = gsAfterComputer.copyAndNormalize()
+    if normalizedGs != nodeAfterComputer.gs {
+      return gs, curNode, errors.New(Sprintf("Normalized GUI game state and solve tree game state do not match: %+v, %+v", normalizedGs, nodeAfterComputer.gs))
+    }
+
+    fmt.Printf("After computer move: previous node: %s current node: %s, normalized move: %+v, gui move: %+v\n", curNode.toString(), nodeAfterComputer.toString(), *normalizedComputerMove, guiComputerMove)
   }
   gsAfterComputer.prettyPrint()
   return gsAfterComputer, nodeAfterComputer, nil
@@ -117,7 +141,11 @@ func main() {
       var gs = &gsVal
       // gsp, _  := gs.playTurn(Left, Left)
       // gs = *gsp
-      var stateNode, visitedStates = solve(gs)
+      var stateNode, visitedStates, solveErr = solve(gs)
+      if solveErr != nil {
+        fmt.Println("Error when solving: " + solveErr.Error())
+        return nil
+      }
       if DEBUG || c.Bool("dump-state") {
         fmt.Println(stateNode.treeToString(visitedStates))
       }

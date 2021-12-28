@@ -15,7 +15,6 @@ func (m *move) toString() string {
   return toString(m.playHand) + " -> " + toString(m.receiveHand)
 }
 
-
 func normalizeHandForPlayer(h Hand, p *player) Hand {
   if p.isEliminated() {
     fmt.Println("Warning: normalizing hand for eliminated player")
@@ -30,13 +29,6 @@ func normalizeHandForPlayer(h Hand, p *player) Hand {
 // ALWAYS use the left hand if both hands are identical, for either player
 func normalizeMove(m move, gs *gameState) move {
   return move{normalizeHandForPlayer(m.playHand, &gs.player1), normalizeHandForPlayer(m.receiveHand, &gs.player2)}
-}
-
-// Like a game state but we maintain that the player hands are sorted
-func (gs *gameState) normalize() *gameState {
-  gs.player1.normalize() 
-  gs.player2.normalize() 
-  return gs
 }
 
 // Assume: computer is always player 1. Change later?
@@ -115,7 +107,7 @@ func (node *playNode) toStringImpl(depth int, recurse bool, visitedStates map[ga
   var sb strings.Builder
   buf := strings.Repeat(" ", depth)
   sb.WriteString(buf)
-  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f ",node.gs.toString(), node.score)) 
+  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f ", node.gs.toString(), node.score)) 
   if len(node.nextNodes) == 0 {
     sb.WriteString("leafNode:\n")
     sb.WriteString(node.gs.prettyString())
@@ -149,14 +141,12 @@ func getPossibleHands(p *player) []Hand {
   }
 }
 
-func solve(gs *gameState) (*playNode, map[gameState]*playNode) {
+func solve(gs *gameState) (*playNode, map[gameState]*playNode, error) {
   var visitedStates = make(map[gameState]*playNode, 5)
   result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, 0)
-  if err != nil {
-    fmt.Println("Got error: " + err.Error())
-  }
   // fmt.Println(result.toString())
-  return result, visitedStates
+  fmt.Println("Generated move tree with " + string(len(visitedStates)) + " nodes.")
+  return result, visitedStates, err
 }
 
 func (node *playNode) getBestMoveAndScore() (*move, float32, error) {
