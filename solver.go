@@ -11,6 +11,27 @@ type move struct {
   receiveHand Hand
 }
 
+func (m *move) toString() string {
+  return toString(m.playHand) + " -> " + toString(m.receiveHand)
+}
+
+
+func normalizeHandForPlayer(h Hand, p *player) Hand {
+  if p.isEliminated() {
+    fmt.Println("Warning: normalizing hand for eliminated player")
+  }
+  if p.lh == p.rh {
+    return Left
+  } else {
+    return h
+  }
+}
+
+// ALWAYS use the left hand if both hands are identical
+func normalizeMove(m move, gs *gameState) move {
+  return move{normalizeHandForPlayer(m.playHand, &gs.player1), normalizeHandForPlayer(m.receiveHand, &gs.player2)}
+}
+
 // Like a game state but we maintain that the player hands are sorted
 func (gs *gameState) normalize() *gameState {
   gs.player1.normalize() 
@@ -122,11 +143,11 @@ func getPossibleHands(p *player) []Hand {
 
 
 func solve(gs *gameState) *playNode {
-  result, err := solveDfs(createPlayNodeCopyGs(gs), 0)
+  result, err := solveDfs(createPlayNodeCopyGs(gs), make(map[gameState]*playNode, 5), 0)
   if err != nil {
     fmt.Println("Got error: " + err.Error())
   }
-  fmt.Println(result.toString())
+  // fmt.Println(result.toString())
   return result
 }
 
@@ -163,9 +184,6 @@ func (node *playNode) getBestMoveAndScore() (*move, float32, error) {
 
 const MAX_DEPTH int = 7
 
-// Global map for memo-izing internal states 
-var visitedInternalStates map[gameState]*playNode = make(map[gameState]*playNode)
-
 // Global map for saving pointers to the frontier 
 // TODO: actually use?
 // const frontier := map[gameState]*playNode
@@ -174,16 +192,20 @@ var visitedInternalStates map[gameState]*playNode = make(map[gameState]*playNode
 // how do you detect and kill loops? - need to memoize game states.
 // there are redundant moves: [1,1],[1,1] should have one move, not four
 //
-func solveDfs(curNode *playNode, depth int) (*playNode, error) {
+func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, depth int) (*playNode, error) {
   // First: check if we've visited this state before. If so, 
   // abort the recursion as we're in a loop. TODO: also allow picking up where
   // we left off??
   curGs := *curNode.gs
-  if visitedInternalStates[curGs] != nil {
+  if visitedStates[curGs] != nil {
     fmt.Printf("-- Returning after detecting a loop. State %+v, score: %f\n", curNode.gs, curNode.score)
     // We're in a loop, abort recursion.
     return curNode, nil 
   }
+
+  // Memoize the current node now so we can catch loops in recursive calls...
+  // TODO: is this problematic for score evaluation?
+  visitedStates[curGs] = curNode
 
   // If the game is over, determine the score and return
   if (curNode.gs.player1.isEliminated()) {
@@ -209,10 +231,6 @@ func solveDfs(curNode *playNode, depth int) (*playNode, error) {
     fmt.Printf("-- Returning after reaching maxDepth. State %+v, score: %f\n", curNode.gs, curNode.score)
     return curNode, nil 
   }
-
-  // Memoize the current node now so we can catch loops in recursive calls...
-  // TODO: is this problematic for score evaluation?
-  visitedInternalStates[curGs] = curNode
 
   // Recursively check all legal moves.
   // for playerHand
@@ -245,7 +263,7 @@ func solveDfs(curNode *playNode, depth int) (*playNode, error) {
         curNode.nextNodes[curMove] = nextNode
       }
       // Recurse, and bubble up errors
-      _, err := solveDfs(nextNode, depth + 1)
+      _, err := solveDfs(nextNode, visitedStates, depth + 1)
       if err != nil {
         return curNode, err
       }

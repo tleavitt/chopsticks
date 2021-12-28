@@ -16,6 +16,14 @@ const (
 	Right
 )
 
+func toString(h Hand) string {
+	if h == Left {
+		return "LH"
+	} else {
+		return "RH"
+	}
+}
+
 type Turn int8
 const (
 	Player1 Turn = 1
