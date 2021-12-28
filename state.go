@@ -2,10 +2,12 @@ package main
 
 import (
   "fmt"
-  "github.com/pkg/errors"
+  "errors"
+  "strings"
 )
 
-const NUM_FINGERS int = 5
+// const NUM_FINGERS int = 5
+const NUM_FINGERS int = 3
 
 type Hand int8
 
@@ -23,6 +25,14 @@ const (
 type player struct {
     lh int
     rh  int
+}
+
+// Swap the lh and rh so the lh <= rh
+func (p *player) normalize() *player {
+	if p.lh > p.rh {
+		p.rh, p.lh = p.lh, p.rh	
+	}
+	return p
 }
 
 func (p *player) isEliminated() bool {
@@ -84,7 +94,7 @@ func (gs *gameState) toString() string {
 	return fmt.Sprintf("%+v", gs)
 }
 
-func (gs *gameState) print() {
+func (gs *gameState) prettyString() string {
 	var player1Dec string = "  "
 	var player2Dec string = "  "
 	if gs.turn == Player1 {
@@ -92,18 +102,26 @@ func (gs *gameState) print() {
 	} else {
 		player2Dec = "=>"
 	}
-	fmt.Println("==================================")
-	fmt.Printf("==         %sPlayer 2           ==\n", player2Dec)
-	fmt.Printf( "==      LH:%d         RH:%d       ==\n", gs.player2.lh, gs.player2.rh)
-	fmt.Println("==------------------------------==")
-	fmt.Printf("==         %sPlayer 1           ==\n", player1Dec)
-	fmt.Printf( "==      LH:%d         RH:%d       ==\n", gs.player1.lh, gs.player1.rh)
-	fmt.Println("==================================")
+	var sb strings.Builder
+
+	sb.WriteString("==================================\n")
+	sb.WriteString(fmt.Sprintf("==         %sPlayer 1           ==\n", player1Dec))
+	sb.WriteString(fmt.Sprintf( "==      LH:%d         RH:%d       ==\n", gs.player1.lh, gs.player1.rh))
+	sb.WriteString("==------------------------------==\n")
+	sb.WriteString(fmt.Sprintf("==         %sPlayer 2           ==\n", player2Dec))
+	sb.WriteString(fmt.Sprintf( "==      LH:%d         RH:%d       ==\n", gs.player2.lh, gs.player2.rh))
+	sb.WriteString("==================================\n")
+
+	return sb.String()
+}
+
+func (gs *gameState) prettyPrint() {
+	fmt.Printf(gs.prettyString())
 }
 
 // Makes a new gameastate
-func copyAndPlayTurn(gs gameState, playerHand Hand, receiverHand Hand) (*gameState, error) {
-	gsCopy := gs
+func copyAndPlayTurn(gs *gameState, playerHand Hand, receiverHand Hand) (*gameState, error) {
+	gsCopy := *gs
 	result, err := gsCopy.playTurn(playerHand, receiverHand)
 	return result, err
 }
@@ -122,9 +140,9 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 	gs.getReceiver().setHand(receiverHand, updatedReceiverVal)
 	gs.incrementTurn()
 
-	if DEBUG {
-		gs.print()
-	}
+	// if DEBUG {
+	// 	gs.prettyPrint()
+	// }
 	return gs, nil
 }
 

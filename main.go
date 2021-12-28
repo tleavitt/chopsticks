@@ -15,10 +15,9 @@ func main() {
   app.Usage = "lets play a game of chopsticks"
   app.Action = func(c *cli.Context) error {
     var gs = initGame()
-    gs.print()
-    gsp, _  := gs.playTurn(Left, Left)
-    gs = *gsp
-    solve(gsp)
+    // gsp, _  := gs.playTurn(Left, Left)
+    // gs = *gsp
+    solve(&gs)
     return nil
   }
 
