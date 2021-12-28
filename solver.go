@@ -182,7 +182,7 @@ func (node *playNode) getBestMoveAndScore() (*move, float32, error) {
   }
 }
 
-const MAX_DEPTH int = 7
+const MAX_DEPTH int = 9
 
 // Global map for saving pointers to the frontier 
 // TODO: actually use?

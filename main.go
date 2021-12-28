@@ -9,22 +9,7 @@ import (
   "errors"
 )
 
-const DEBUG bool = false
-
-// func main() {
-//   app := cli.NewApp()
-//   app.Name = "chopsticks"
-//   app.Usage = "lets play a game of chopsticks"
-//   app.Action = func(c *cli.Context) error {
-//     var gs = initGame()
-//     // gsp, _  := gs.playTurn(Left, Left)
-//     // gs = *gsp
-//     solve(&gs)
-//     return nil
-//   }
-
-// }
-
+const DEBUG bool = true
 
 type GameResult int8
 const (
@@ -53,8 +38,8 @@ func stringInputToHand(i string) (Hand, error) {
   }
 }
 
-func runGameIteration(gs *gameState, curNode *playNode) (*gameState, *playNode, error) {
-  gs.prettyPrint()
+
+func runPlayerTurn(gs *gameState, curNode *playNode) (*gameState, *playNode, error) {
   fmt.Println("Your turn.")
   fmt.Println("What would you like to play?")
 
@@ -63,7 +48,9 @@ func runGameIteration(gs *gameState, curNode *playNode) (*gameState, *playNode, 
   // Format: LH RH 
   fmt.Scanln(&playerMoveStr)
   // NOTE: gs might not be the same as the gs value in the curNode due to normalization!!
-  playerMoveSlice := strings.Split(playerMoveStr, " ")
+  playerMoveSlice := strings.Split(playerMoveStr, "->")
+  fmt.Println(playerMoveStr)
+  fmt.Println(playerMoveSlice)
   playerHand, errP := stringInputToHand(playerMoveSlice[0]) 
   if errP != nil {
     return gs, curNode, errP
@@ -79,29 +66,36 @@ func runGameIteration(gs *gameState, curNode *playNode) (*gameState, *playNode, 
   if err != nil {
     return gs, curNode, err
   }
-  gsAfterPlayer.prettyPrint()
 
-
-  // Computer move
-  // using curNode.gs should be ok? corresponds to previous game state before player turn. enforce that?
   normalizedPlayerMove := normalizeMove(playerMove, curNode.gs) 
   nodeAfterPlayer, okP := curNode.nextNodes[normalizedPlayerMove]
   if !okP {
     return gs, curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
   }
+  gsAfterPlayer.prettyPrint()
+  return gsAfterPlayer, nodeAfterPlayer, nil
+}
 
-  computerMove, _, errC := nodeAfterPlayer.getBestMoveAndScore()
+func runComputerTurn(gs *gameState, curNode *playNode) (*gameState, *playNode, error) {
+  // Computer move
+  // using curNode.gs should be ok? corresponds to previous game state before player turn. enforce that?
+
+  computerMove, _, errC := curNode.getBestMoveAndScore()
   if errC != nil {
     return gs, curNode, errC
   }
 
   fmt.Println("I'll play: " + computerMove.toString())
   gsAfterComputer, err := gs.playTurn(computerMove.playHand, computerMove.receiveHand)
-  nodeAfterComputer, okC :=  nodeAfterPlayer.nextNodes[*computerMove]
-  if !okC {
-    return gs, curNode, errors.New(fmt.Sprintf("Computer move not found in nodeAfterPlayer: %+v", nodeAfterPlayer))
+  if err != nil {
+    return gs, curNode, err
   }
-  return gsAfterComputer, nodeAfterComputer, err
+  nodeAfterComputer, okC := curNode.nextNodes[*computerMove]
+  if !okC {
+    return gs, curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))
+  }
+  gsAfterComputer.prettyPrint()
+  return gsAfterComputer, nodeAfterComputer, nil
 }
 
 func main() {
@@ -117,15 +111,23 @@ func main() {
       var gs = &gsVal
       // gsp, _  := gs.playTurn(Left, Left)
       // gs = *gsp
-      stateNode := solve(gs)
+      var stateNode = solve(gs)
+      if DEBUG {
+        fmt.Println(stateNode.toString())
+      }
       if c.Bool("dump-state") {
         fmt.Println(stateNode.toString())
       }
       fmt.Println("Let's play a game of chopsticks! You be Player 1.")
+      gs.prettyPrint()
       var gameResult GameResult
       var err error = nil
-      for gameResult = checkGameResult(gs); gameResult != Ongoing; gameResult = checkGameResult(gs) {
-        gs, stateNode, err = runGameIteration(gs, stateNode)
+      for gameResult = checkGameResult(gs); gameResult == Ongoing; gameResult = checkGameResult(gs) {
+        if gs.turn == Player1 {
+         gs, stateNode, err = runPlayerTurn(gs, stateNode)  
+        } else {
+         gs, stateNode, err = runComputerTurn(gs, stateNode)  
+        }
         if err != nil {
           fmt.Println(err.Error()) 
           return nil
