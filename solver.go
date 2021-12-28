@@ -27,7 +27,7 @@ func normalizeHandForPlayer(h Hand, p *player) Hand {
   }
 }
 
-// ALWAYS use the left hand if both hands are identical
+// ALWAYS use the left hand if both hands are identical, for either player
 func normalizeMove(m move, gs *gameState) move {
   return move{normalizeHandForPlayer(m.playHand, &gs.player1), normalizeHandForPlayer(m.receiveHand, &gs.player2)}
 }
@@ -104,10 +104,14 @@ func createPlayNodeReuseGs(gs *gameState) *playNode {
 }
 
 func (node *playNode) toString() string {
-  return node.toStringImpl(0)
+  return node.toStringImpl(0, false, nil)
 }
 
-func (node *playNode) toStringImpl(depth int) string {
+func (node *playNode) treeToString(visitedStates map[gameState]*playNode) string {
+  return node.toStringImpl(0, true, visitedStates)
+}
+
+func (node *playNode) toStringImpl(depth int, recurse bool, visitedStates map[gameState]*playNode) string {
   var sb strings.Builder
   buf := strings.Repeat(" ", depth)
   sb.WriteString(buf)
@@ -121,7 +125,11 @@ func (node *playNode) toStringImpl(depth int) string {
       sb.WriteString(buf)
       // One more space
       sb.WriteString(fmt.Sprintf(" %+v\n", nextMove))
-      sb.WriteString(nextNode.toStringImpl(depth + 1))
+      if recurse && visitedStates[*nextNode.gs] != nil {
+        sb.WriteString(nextNode.toStringImpl(depth + 1, recurse, visitedStates))
+      } else {
+        sb.WriteString("...")
+      }
       sb.WriteString("\n")
     } 
   }
@@ -130,7 +138,7 @@ func (node *playNode) toStringImpl(depth int) string {
 }
 
 var DISTINCT_HANDS []Hand = []Hand{Left, Right}
-// WLOG if the player can use (i.e. play or receive) either hand, he always uses his left hand.
+// WLOG if the player can use (i.e. play or receive) either hand, they always use their left hand.
 var EITHER_HAND []Hand = []Hand{Left}
 
 func getPossibleHands(p *player) []Hand {
@@ -141,14 +149,14 @@ func getPossibleHands(p *player) []Hand {
   }
 }
 
-
-func solve(gs *gameState) *playNode {
-  result, err := solveDfs(createPlayNodeCopyGs(gs), make(map[gameState]*playNode, 5), 0)
+func solve(gs *gameState) (*playNode, map[gameState]*playNode) {
+  var visitedStates = make(map[gameState]*playNode, 5)
+  result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, 0)
   if err != nil {
     fmt.Println("Got error: " + err.Error())
   }
   // fmt.Println(result.toString())
-  return result
+  return result, visitedStates
 }
 
 func (node *playNode) getBestMoveAndScore() (*move, float32, error) {
@@ -198,9 +206,8 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, depth in
   // we left off??
   curGs := *curNode.gs
   if visitedStates[curGs] != nil {
-    fmt.Printf("-- Returning after detecting a loop. State %+v, score: %f\n", curNode.gs, curNode.score)
-    // We're in a loop, abort recursion.
-    return curNode, nil 
+    // We should catch loops before we make recursive calls, so error if we detect a loop
+    return curNode, errors.New("detected loop at beginning of recursive call: " + curNode.toString())
   }
 
   // Memoize the current node now so we can catch loops in recursive calls...
@@ -257,6 +264,18 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, depth in
       } else {
         // Make sure the gamestate gets copied....
         nextState, _ := copyAndPlayTurn(curNode.gs, playerHand, receiverHand)
+
+        // HERE we have to check for possible loops, and if so, add the loop connection
+        // in our graph
+
+        existingNode, exists := visitedStates[*nextState]
+        if exists {
+          if DEBUG {
+            fmt.Printf(fmt.Sprintf("Found loop in move tree, not recursing further. CurNode: %s, loop move: %+v\n", curNode.toString(), curMove))
+          }
+          curNode.nextNodes[curMove] = existingNode
+          continue
+        }
 
         // Add new state to cur state's children
         nextNode = createPlayNodeReuseGs(nextState)

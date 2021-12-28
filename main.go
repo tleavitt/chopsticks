@@ -69,6 +69,9 @@ func runPlayerTurn(gs *gameState, curNode *playNode) (*gameState, *playNode, err
 
   normalizedPlayerMove := normalizeMove(playerMove, curNode.gs) 
   nodeAfterPlayer, okP := curNode.nextNodes[normalizedPlayerMove]
+  if DEBUG {
+    fmt.Printf("After player move: previous node: %s current node: %s, normalized move: %+v\n", curNode.toString(), nodeAfterPlayer.toString(), normalizedPlayerMove)
+  }
   if !okP {
     return gs, curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
   }
@@ -91,6 +94,9 @@ func runComputerTurn(gs *gameState, curNode *playNode) (*gameState, *playNode, e
     return gs, curNode, err
   }
   nodeAfterComputer, okC := curNode.nextNodes[*computerMove]
+  if DEBUG {
+    fmt.Printf("After computer move: previous node: %s current node: %s, normalized move: %+v\n", curNode.toString(), nodeAfterComputer.toString(), *computerMove)
+  }
   if !okC {
     return gs, curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))
   }
@@ -111,12 +117,9 @@ func main() {
       var gs = &gsVal
       // gsp, _  := gs.playTurn(Left, Left)
       // gs = *gsp
-      var stateNode = solve(gs)
-      if DEBUG {
-        fmt.Println(stateNode.toString())
-      }
-      if c.Bool("dump-state") {
-        fmt.Println(stateNode.toString())
+      var stateNode, visitedStates = solve(gs)
+      if DEBUG || c.Bool("dump-state") {
+        fmt.Println(stateNode.treeToString(visitedStates))
       }
       fmt.Println("Let's play a game of chopsticks! You be Player 1.")
       gs.prettyPrint()
