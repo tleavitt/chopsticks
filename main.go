@@ -39,7 +39,7 @@ func stringInputToHand(i string) (Hand, error) {
 }
 
 func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *playNode, nodeBeforePlay *playNode, guiMove move, normalizedMove move) error {
-   normalizedAfter, _, _ := gsAfterPlay.copyAndNormalize()
+   normalizedAfter := gsAfterPlay.copyAndNormalize()
     if !normalizedAfter.equals(nodeAfterPlay.gs) {
       return errors.New(fmt.Sprintf("Normalized GUI game state and solve tree game state do not match: %+v, %+v", normalizedAfter, nodeAfterPlay.gs))
     }
@@ -49,7 +49,15 @@ func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *playNode, nodeBeforePla
     return nil
 }
 
-func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*gameState, *playNode, error) {
+func validateGpsAndNode(gps *gamePlayState, curNode *playNode) error {
+  if !gps.normalizedState.equals(curNode.gs) {
+    return errors.New(fmt.Sprintf("GPS normalized state and solve node state do not match: %+v, %+v", gps.normalizedState, curNode.gs))
+  } else {
+    return nil
+  }
+}
+
+func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
   fmt.Println("Your turn.")
   fmt.Println("What would you like to play?")
 
@@ -60,80 +68,76 @@ func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*gameState, *playNode
   // NOTE: gs might not be the same as the gs value in the curNode due to normalization!!
   playerMoveSlice := strings.Split(playerMoveStr, "->")
 
-  playerHand, errP := stringInputToHand(playerMoveSlice[0]) 
-  if errP != nil {
-    return gps.state, curNode, errP
+  playerHand, err := stringInputToHand(playerMoveSlice[0]) 
+  if err != nil {
+    return curNode, err
   }
-  receiverHand, errR := stringInputToHand(playerMoveSlice[1]) 
-  if errR != nil {
-    return gps.state, curNode, errR
+  receiverHand, err := stringInputToHand(playerMoveSlice[1]) 
+  if err != nil {
+    return curNode, err
   }
 
   playerMove := move{playerHand, receiverHand}
   fmt.Println("You played: " + playerMove.toString())
   normalizedPlayerMove, err := gps.playGameTurn(playerMove)
   if err != nil {
-    return 
+    return curNode, err
   }
   nodeAfterPlayer, okP := curNode.nextNodes[normalizedPlayerMove]
   // NOTE: nodeAfterPlayer.gs and gsAfterPlayer may not be equal due to normalization differences, but they should
   // be equal after normalizing
   if !okP {
-    return gps.state, curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
+    return curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
   }
   if DEBUG {
       if err := dumpTurnInfo(gps.state, nodeAfterPlayer, curNode, playerMove, normalizedPlayerMove); err != nil {
-        return gps.state, curNode, err
+        return curNode, err
       }
   }
   gps.state.prettyPrint()
-  return gps.state, nodeAfterPlayer, nil
+  return nodeAfterPlayer, nil
 }
 
 
-func runComputerTurn(guiGs *gameState, curNode *playNode) (*gameState, *playNode, error) {
+func runComputerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
   // Computer move
   // Need to normalize the guiGs in order to map the best move onto the current GUI
-  normalizedGs, swappedPlayer1, swappedPlayer2 := guiGs.copyAndNormalize()
-
-  normalizedComputerMove, _, errC := curNode.getBestMoveAndScore(true)
-  if errC != nil {
-    return guiGs, curNode, errC
+  normalizedComputerMove, _, err := curNode.getBestMoveAndScore(true)
+  if err != nil {
+    return curNode, err
   }
-  // Denormalize the computer's move to display in the GUI
-  guiComputerMove := denormalizeMove(normalizedComputerMove, swappedPlayer1, swappedPlayer2, normalizedGs.turn)
+
+  guiComputerMove, err := gps.playNormalizedTurn(normalizedComputerMove)
+  if err != nil {
+    return curNode, err
+  }
 
   fmt.Println("I'll play: " + guiComputerMove.toString())
-  gsAfterComputer, err := guiGs.playTurn(guiComputerMove.playHand, guiComputerMove.receiveHand)
-  if err != nil {
-    return guiGs, curNode, err
-  }
 
-  // Invariant: normalize then play normalized then normalize should be the same as play then normalize
-  if DEBUG {
-    gsNormalizePlayUnnorm, err := normalizedGs.playTurn(normalizedComputerMove.playHand, normalizedComputerMove.receiveHand)
-    if err != nil {
-      return guiGs, curNode, err
-    }
-    gsNormalizePlay, _, _ := gsNormalizePlayUnnorm.copyAndNormalize()
-    gsPlayNormalize, _, _ := gsAfterComputer.copyAndNormalize()
-    if !gsNormalizePlay.equals(gsPlayNormalize) {
-      return guiGs, curNode, errors.New(fmt.Sprintf("Invariant violation: normalization and play do not compose: normalize then play: %+v, play then normalize: %+v", gsNormalizePlay, gsPlayNormalize))
-    }
-
-  }
+  // // Invariant: normalize then play normalized then normalize should be the same as play then normalize
+  // if DEBUG {
+  //   gsNormalizePlayUnnorm, err := normalizedGs.playTurn(normalizedComputerMove.playHand, normalizedComputerMove.receiveHand)
+  //   if err != nil {
+  //     return curNode, err
+  //   }
+  //   gsNormalizePlay, _, _ := gsNormalizePlayUnnorm.copyAndNormalize()
+  //   gsPlayNormalize, _, _ := gsAfterComputer.copyAndNormalize()
+  //   if !gsNormalizePlay.equals(gsPlayNormalize) {
+  //     return guiGs, curNode, errors.New(fmt.Sprintf("Invariant violation: normalization and play do not compose: normalize then play: %+v, play then normalize: %+v", gsNormalizePlay, gsPlayNormalize))
+  //   }
+  // }
 
   nodeAfterComputer, okC := curNode.nextNodes[normalizedComputerMove]
   if !okC {
-    return guiGs, curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))
+    return curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))
   }
   if DEBUG {
-    if err := dumpTurnInfo(gsAfterComputer, nodeAfterComputer, curNode, guiComputerMove, normalizedComputerMove); err != nil {
-      return guiGs, curNode, err
+    if err := dumpTurnInfo(gps.state, nodeAfterComputer, curNode, guiComputerMove, normalizedComputerMove); err != nil {
+      return curNode, err
     }
   }
-  gsAfterComputer.prettyPrint()
-  return gsAfterComputer, nodeAfterComputer, nil
+  gps.state.prettyPrint()
+  return nodeAfterComputer, nil
 }
 
 func main() {
@@ -146,10 +150,9 @@ func main() {
     },
     Action: func(c *cli.Context) error {
       gsVal := initGame()
-      var gs = &gsVal
-      // gsp, _  := gs.playTurn(Left, Left)
-      // gs = *gsp
-      var stateNode, _, solveErr = solve(gs)
+      gs := &gsVal
+
+      var stateNode, _, _, solveErr = solve(gs)
       if solveErr != nil {
         fmt.Println("Error when solving: " + solveErr.Error())
         return nil
@@ -159,17 +162,23 @@ func main() {
       }
       fmt.Println("Let's play a game of chopsticks! You be Player 1.")
       gs.prettyPrint()
+
+      gps := createGamePlayState(gs)
       var gameResult GameResult
       var err error = nil
-      for gameResult = checkGameResult(gs); gameResult == Ongoing; gameResult = checkGameResult(gs) {
-        if gs.turn == Player1 {
-         gs, stateNode, err = runPlayerTurn(gs, stateNode)  
+      for gameResult = checkGameResult(gps.state); gameResult == Ongoing; gameResult = checkGameResult(gps.state) {
+        if DEBUG {
+          if err := validateGpsAndNode(gps, stateNode); err != nil {
+            return err
+          }
+        }
+        if gps.state.turn == Player1 {
+          stateNode, err = runPlayerTurn(gps, stateNode)  
         } else {
-         gs, stateNode, err = runComputerTurn(gs, stateNode)  
+          stateNode, err = runComputerTurn(gps, stateNode)  
         }
         if err != nil {
-          fmt.Println(err.Error()) 
-          return nil
+          return err
         }
       }
       return nil

@@ -1,8 +1,8 @@
 package main
 
 
-// const NUM_FINGERS int = 5
-const NUM_FINGERS int8 = 3
+// var NUM_FINGERS int = 5
+var NUM_FINGERS int8 = 3
 
 type Hand int8
 
@@ -38,6 +38,10 @@ type player struct {
     rh int8
 }
 
+func (p *player) equals(other *player) bool {
+	return p.lh == other.lh && p.rh == other.rh
+}
+
 // If necessary swap lh and rh so the lh <= rh, 
 // return True if we swapped and false if not
 func (p *player) normalize() (*player, bool) {
@@ -48,7 +52,7 @@ func (p *player) normalize() (*player, bool) {
 	return p, false
 }
 
-func (p *player) isNormalized() {
+func (p *player) isNormalized() bool {
 	return p.lh <= p.rh
 }
 

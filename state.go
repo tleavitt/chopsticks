@@ -7,7 +7,7 @@ import (
 )
 
 type gameState struct {
-	// TODO: make these pointers?
+	// NOTE: don't make these pointers, otherwise copying and keying doesn't work.
 	player1 player
 	player2 player
 	turn Turn // Turn indicates who the player is vs the receiver
@@ -18,19 +18,17 @@ func (gs *gameState) equals(other *gameState) bool {
 }
 
 // Maintain that the player hands are in sorted order (smallest hand first)
-// Allows deduplication. Returns whether we swapped either of the player's hands when normalizing, 
-// to enable the inverse transform.
-func (gs *gameState) normalize() (*gameState, bool, bool) {
-  _, swappedPlayer1 := gs.player1.normalize() 
-  _, swappedPlayer2 := gs.player2.normalize() 
-  return gs, swappedPlayer1, swappedPlayer2
+func (gs *gameState) normalize() *gameState {
+  gs.player1.normalize() 
+  gs.player2.normalize() 
+  return gs
 }
 
 func (gs *gameState) isNormalized() bool {
 	return gs.player1.lh <= gs.player1.rh && gs.player2.lh <= gs.player2.rh
 }
 
-func (gs gameState) copyAndNormalize() (*gameState, bool, bool) {
+func (gs gameState) copyAndNormalize() *gameState {
 	return gs.normalize()
 }
 
@@ -128,7 +126,7 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 }
 
 // Note: mutates state
-func (gs *gameState) playTurn(m Move) (*gameState, error) {
+func (gs *gameState) playMove(m move) (*gameState, error) {
 	return gs.playTurn(m.playHand, m.receiveHand)
 }
 

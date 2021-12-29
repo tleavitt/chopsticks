@@ -21,7 +21,7 @@ func TestStateCopy(t *testing.T) {
   }
 
   gsCopy3 := gs
-  gsNormalized, _, _ := gsCopy3.copyAndNormalize()
+  gsNormalized := gsCopy3.copyAndNormalize()
   if !gsCopy3.equals(&gs) {
     t.Fatalf("States differ when they should be equal: %+v, %+v", gsCopy3, gs)
   }
