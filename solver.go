@@ -2,7 +2,6 @@ package main
 
 import (
   "fmt"
-  "strings"
   "errors"
 )
 
@@ -22,32 +21,34 @@ func solve(gs *gameState) (*playNode, map[gameState]*playNode, error) {
   var visitedStates = make(map[gameState]*playNode, 5)
   result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, 0)
   // fmt.Println(result.toString())
-  fmt.Println("Generated move tree with " + string(len(visitedStates)) + " nodes.")
+  fmt.Println("Generated move tree with " + fmt.Sprint(len(visitedStates)) + " nodes.")
   return result, visitedStates, err
 }
 
-func (node *playNode) getBestMoveAndScore() (*move, float32, error) {
+func (node *playNode) getBestMoveAndScore(log bool) (move, float32, error) {
   // Our best move is the move that puts our opponent in the worst position.
   // The score of the current node is the negative of the score of our opponent in the node after our best move.
   var worstNextScoreForOpp float32 = 2 // This is an impossible score, so we should always trigger an update in the loop.
-  var bestMoveForUs *move = nil
-  // log := len(node.nextNodes) > 1
-  log := false 
+  var bestMoveForUs move // This should always get updated.
   if log {
     fmt.Printf("-- Running getBestMoveAndScore() for %+v\n", node.gs)
   }
   for nextMove, nextNode := range node.nextNodes {
     oppScore := nextNode.scoreForCurrentPlayer() 
     if log {
-      fmt.Printf("-- Node %+v, oppScore (for them): %f\n", nextNode.gs, oppScore)
+      fmt.Printf("-- Move: %+v, GS %+v, oppScore (for them): %f, worstNextScoreForOpp: %f, bestMoveForUs: %+v\n", nextMove, nextNode.gs, oppScore, worstNextScoreForOpp, bestMoveForUs)
     }
     if oppScore < worstNextScoreForOpp {
       worstNextScoreForOpp = oppScore
-      bestMoveForUs = &nextMove
+      // Tricky bug! next move gets reused within the for loop, need to copy. Don't use pointers here.
+      bestMoveForUs = nextMove
+      if log {
+        fmt.Printf("--- Update triggered, new worstNextScoreForOpp: %f, new bestMoveForUs %+v\n", worstNextScoreForOpp, bestMoveForUs)
+      }
     }
   }
-  if bestMoveForUs == nil || worstNextScoreForOpp > 1 || worstNextScoreForOpp < -1 {
-    return nil, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: play node is invalid: %+v", node))
+  if worstNextScoreForOpp > 1 || worstNextScoreForOpp < -1 {
+    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: play node is invalid: %+v", node))
   } else {
     // Note the negative sign!! worst score for opp is the best score for us.
     if log {
@@ -130,7 +131,10 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, depth in
         nextNode = curNode.nextNodes[curMove]
       } else {
         // Make sure the gamestate gets copied....
-        nextState, _ := copyAndPlayTurn(curNode.gs, playerHand, receiverHand)
+        nextState, err := curNode.gs.copyAndPlayTurn(playerHand, receiverHand)
+        if err != nil {
+          return curNode, err
+        }
 
         // HERE we have to check for possible loops, and if so, add the loop connection
         // in our graph
@@ -158,7 +162,7 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, depth in
 
 
   // We're done evaluating all children. Determine our score
-  _, curPlayerScore, err := curNode.getBestMoveAndScore()
+  _, curPlayerScore, err := curNode.getBestMoveAndScore(false)
   if err != nil {
     return curNode, err
   }

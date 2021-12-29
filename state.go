@@ -100,7 +100,7 @@ func (gs *gameState) prettyPrint() {
 }
 
 // Makes a new gameastate
-func copyAndPlayTurn(gs *gameState, playerHand Hand, receiverHand Hand) (*gameState, error) {
+func (gs *gameState) copyAndPlayTurn(playerHand Hand, receiverHand Hand) (*gameState, error) {
 	gsCopy := *gs
 	result, err := gsCopy.playTurn(playerHand, receiverHand)
 	return result, err
@@ -116,6 +116,7 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 	if (receiverVal == 0) {
 		return gs, errors.New("illegalMove: attempted to receive on an eliminated hand")
 	}
+	// Chopsticks update:
 	updatedReceiverVal := (receiverVal + playerVal) % NUM_FINGERS
 	gs.getReceiver().setHand(receiverHand, updatedReceiverVal)
 	gs.incrementTurn()

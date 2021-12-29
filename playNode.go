@@ -30,6 +30,24 @@ func normalizeHandForPlayer(h Hand, p *player) Hand {
 func normalizeMove(m move, gs *gameState) move {
   return move{normalizeHandForPlayer(m.playHand, &gs.player1), normalizeHandForPlayer(m.receiveHand, &gs.player2)}
 }
+
+func denormalizeMove(m move, swappedPlayer1 bool, swappedPlayer2 bool, t Turn) move {
+  if swappedPlayer1 {
+    if t == Player1 {
+      m.playHand = m.playHand.invert()
+    } else {
+      m.receiveHand = m.receiveHand.invert()
+    }
+  }
+  if swappedPlayer2 {
+    if t == Player1 {
+      m.receiveHand = m.receiveHand.invert()
+    } else {
+      m.playHand = m.playHand.invert()
+    }
+  }
+  return m
+}
 // ==== End Move ====
 
 // ==== playNode ==== 
@@ -109,21 +127,23 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)
   sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f ", node.gs.toString(), node.score)) 
-  printedStates[node.gs] = true
+  printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
     sb.WriteString("leafNode:\n")
     sb.WriteString(node.gs.prettyString())
   } else {
     sb.WriteString("nextNodes:\n")
     for nextMove, nextNode := range node.nextNodes { 
-      sb.WriteString(buf)
       // One more space
-      sb.WriteString(fmt.Sprintf(" %+v\n", nextMove))
-      if printedStates[*nextNode.gs] != nil {
+      sb.WriteString(buf + " ")
+      sb.WriteString(fmt.Sprintf("%+v\n", nextMove))
+      if printedStates[*nextNode.gs] {
+        sb.WriteString(buf + " ")
         sb.WriteString("<previously printed>")
       } else if curDepth < maxDepth {
-        sb.WriteString(nextNode.toStringImpl(curDepth + 1, maxDepth, visitedStates))
+        sb.WriteString(nextNode.toStringImpl(curDepth + 1, maxDepth, printedStates))
       } else {
+        sb.WriteString(buf + " ")
         sb.WriteString("...")
       }
       sb.WriteString("\n")
