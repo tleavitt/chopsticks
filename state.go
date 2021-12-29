@@ -127,6 +127,11 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 	return gs, nil
 }
 
+// Note: mutates state
+func (gs *gameState) playTurn(m Move) (*gameState, error) {
+	return gs.playTurn(m.playHand, m.receiveHand)
+}
+
 func initGame() gameState {
 	return gameState{
 		player{1, 1},	

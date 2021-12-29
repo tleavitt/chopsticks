@@ -49,7 +49,7 @@ func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *playNode, nodeBeforePla
     return nil
 }
 
-func runPlayerTurn(guiGs *gameState, curNode *playNode) (*gameState, *playNode, error) {
+func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*gameState, *playNode, error) {
   fmt.Println("Your turn.")
   fmt.Println("What would you like to play?")
 
@@ -62,34 +62,32 @@ func runPlayerTurn(guiGs *gameState, curNode *playNode) (*gameState, *playNode, 
 
   playerHand, errP := stringInputToHand(playerMoveSlice[0]) 
   if errP != nil {
-    return guiGs, curNode, errP
+    return gps.state, curNode, errP
   }
   receiverHand, errR := stringInputToHand(playerMoveSlice[1]) 
   if errR != nil {
-    return guiGs, curNode, errR
+    return gps.state, curNode, errR
   }
 
   playerMove := move{playerHand, receiverHand}
   fmt.Println("You played: " + playerMove.toString())
-  gsAfterPlayer, err := guiGs.playTurn(playerMove.playHand, playerMove.receiveHand)
+  normalizedPlayerMove, err := gps.playGameTurn(playerMove)
   if err != nil {
-    return guiGs, curNode, err
+    return 
   }
-
-  normalizedPlayerMove := normalizeMove(playerMove, curNode.gs) 
   nodeAfterPlayer, okP := curNode.nextNodes[normalizedPlayerMove]
   // NOTE: nodeAfterPlayer.gs and gsAfterPlayer may not be equal due to normalization differences, but they should
   // be equal after normalizing
   if !okP {
-    return guiGs, curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
+    return gps.state, curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
   }
   if DEBUG {
-      if err := dumpTurnInfo(gsAfterPlayer, nodeAfterPlayer, curNode, playerMove, normalizedPlayerMove); err != nil {
-        return guiGs, curNode, err
+      if err := dumpTurnInfo(gps.state, nodeAfterPlayer, curNode, playerMove, normalizedPlayerMove); err != nil {
+        return gps.state, curNode, err
       }
   }
-  gsAfterPlayer.prettyPrint()
-  return gsAfterPlayer, nodeAfterPlayer, nil
+  gps.state.prettyPrint()
+  return gps.state, nodeAfterPlayer, nil
 }
 
 

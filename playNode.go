@@ -25,29 +25,6 @@ func normalizeHandForPlayer(h Hand, p *player) Hand {
     return h
   }
 }
-
-// ALWAYS use the left hand if both hands are identical, for either player
-func normalizeMove(m move, gs *gameState) move {
-  return move{normalizeHandForPlayer(m.playHand, &gs.player1), normalizeHandForPlayer(m.receiveHand, &gs.player2)}
-}
-
-func denormalizeMove(m move, swappedPlayer1 bool, swappedPlayer2 bool, t Turn) move {
-  if swappedPlayer1 {
-    if t == Player1 {
-      m.playHand = m.playHand.invert()
-    } else {
-      m.receiveHand = m.receiveHand.invert()
-    }
-  }
-  if swappedPlayer2 {
-    if t == Player1 {
-      m.receiveHand = m.receiveHand.invert()
-    } else {
-      m.playHand = m.playHand.invert()
-    }
-  }
-  return m
-}
 // ==== End Move ====
 
 // ==== playNode ==== 

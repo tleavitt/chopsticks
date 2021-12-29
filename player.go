@@ -48,6 +48,14 @@ func (p *player) normalize() (*player, bool) {
 	return p, false
 }
 
+func (p *player) isNormalized() {
+	return p.lh <= p.rh
+}
+
+func (p player) copyAndNormalize() (*player, bool) {
+	return p.normalize()
+}
+
 func (p *player) isEliminated() bool {
 	return p.lh == 0 && p.rh == 0
 }
