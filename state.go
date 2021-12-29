@@ -6,74 +6,6 @@ import (
   "strings"
 )
 
-// const NUM_FINGERS int = 5
-const NUM_FINGERS int = 3
-
-type Hand int8
-
-const (
-	Left Hand = iota
-	Right
-)
-
-func (h Hand) invert() Hand {
-	if h == Left {
-		return Right
-	} else {
-		return Left
-	}
-}
-
-func toString(h Hand) string {
-	if h == Left {
-		return "LH"
-	} else {
-		return "RH"
-	}
-}
-
-type Turn int8
-const (
-	Player1 Turn = 1
-	Player2 = 2
-)
-
-type player struct {
-    lh int
-    rh  int
-}
-
-// If necessary swap lh and rh so the lh <= rh, 
-// return True if we swapped and false if not
-func (p *player) normalize() (*player, bool) {
-	if p.lh > p.rh {
-		p.rh, p.lh = p.lh, p.rh	
-		return p, true
-	}
-	return p, false
-}
-
-func (p *player) isEliminated() bool {
-	return p.lh == 0 && p.rh == 0
-}
-
-func (p *player) getHand(h Hand) int {
-	if h == Left {
-		return p.lh
-	} else {
-		return p.rh
-	}
-}
-
-func (p *player) setHand(h Hand, value int) *player {
-	if h == Left {
-		p.lh = value
-	} else {
-		p.rh = value
-	}
-	return p
-}
-
 type gameState struct {
 	// TODO: make these pointers?
 	player1 player
@@ -81,20 +13,28 @@ type gameState struct {
 	turn Turn // Turn indicates who the player is vs the receiver
 }
 
+func (gs *gameState) equals(other *gameState) bool {
+	return gs.player1 == other.player1 && gs.player2 == other.player2 && gs.turn == other.turn
+}
+
 // Maintain that the player hands are in sorted order (smallest hand first)
 // Allows deduplication. Returns whether we swapped either of the player's hands when normalizing, 
 // to enable the inverse transform.
 func (gs *gameState) normalize() (*gameState, bool, bool) {
-  _, swappedPlayer1 = gs.player1.normalize() 
-  _, swappedPlayer2 = gs.player2.normalize() 
+  _, swappedPlayer1 := gs.player1.normalize() 
+  _, swappedPlayer2 := gs.player2.normalize() 
   return gs, swappedPlayer1, swappedPlayer2
+}
+
+func (gs *gameState) isNormalized() bool {
+	return gs.player1.lh <= gs.player1.rh && gs.player2.lh <= gs.player2.rh
 }
 
 func (gs gameState) copyAndNormalize() (*gameState, bool, bool) {
 	return gs.normalize()
 }
 
-func (gs gameState) copyAndDenormalize(swapPlayer1 bool, swapPlaer2 bool) *gameState {
+func (gs gameState) copyAndDenormalize(swapPlayer1 bool, swapPlayer2 bool) *gameState {
 	if swapPlayer1 {
 		gs.player1.rh, gs.player1.lh = gs.player1.lh, gs.player1.rh
 	}
@@ -119,7 +59,6 @@ func (gs *gameState) getReceiver() *player {
 		return &gs.player1		
 	}
 }
-
 
 // Update the turn variable and swap the players
 func (gs *gameState) incrementTurn() *gameState {
