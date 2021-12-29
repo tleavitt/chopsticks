@@ -181,6 +181,14 @@ func main() {
           return err
         }
       }
+
+      // Game over!
+      fmt.Println("Game over!")
+      if gameResult == Player1Wins {
+        fmt.Println("You win!")
+      } else {
+        fmt.Println("I win!")
+      }
       return nil
     },
   }

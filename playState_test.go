@@ -1,10 +1,25 @@
 package main
 
 import (
-    "testing"
+  "fmt"
+  "testing"
+  "os"
 )
 
+func TestMain(m *testing.M) {
+  // TERRIBLE HACK: don't make this a global variable
+  prevNumFingers := NUM_FINGERS
+  NUM_FINGERS = 3  
+  fmt.Printf("Changing global NUM_FINGERS from %d to %d...\n", prevNumFingers, NUM_FINGERS)
+  code := m.Run() 
+  NUM_FINGERS = prevNumFingers
+  fmt.Printf("Changing global NUM_FINGERS back to %d.\n", NUM_FINGERS)
+  os.Exit(code)
+}
+
+
 func TestGamePlayStateDeepCopy(t *testing.T) {
+  fmt.Println("starting TestGamePlayStateDeepCopy")
   gs := gameState{
     player{2, 1}, player{1, 1}, Player1,
   }
@@ -21,6 +36,7 @@ func TestGamePlayStateDeepCopy(t *testing.T) {
 
 // Damn this shit is tricky
 func TestGamePlayState1(t *testing.T) {
+  fmt.Println("starting TestGamePlayState1")
   gs := gameState{
     player{2, 1}, player{1, 1}, Player1,
   }
@@ -47,6 +63,7 @@ func TestGamePlayState1(t *testing.T) {
 }
 
 func TestGamePlayState2(t *testing.T) {
+  fmt.Println("starting TestGamePlayState2")
   gs := gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
@@ -79,6 +96,7 @@ func TestGamePlayState2(t *testing.T) {
 }
 
 func TestGamePlayState3(t *testing.T) {
+  fmt.Println("starting TestGamePlayState3")
   gs := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }
@@ -109,6 +127,8 @@ func TestGamePlayState3(t *testing.T) {
 }
 
 func TestGamePlayState4(t *testing.T) {
+  fmt.Println("starting TestGamePlayState4")
+
   gs := gameState{
     player{2, 1}, player{1, 2}, Player1,
   }

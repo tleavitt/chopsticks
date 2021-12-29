@@ -1,10 +1,12 @@
 package main
 
 import (
-    "testing"
+  "fmt"
+  "testing"
 )
 
 func TestStateCopy(t *testing.T) {
+  fmt.Println("starting TestStateCopy")
   gs := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }

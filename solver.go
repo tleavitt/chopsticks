@@ -157,7 +157,7 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves m
         curNode.nextNodes[curMove] = nextNode
       }
       // Recurse, and bubble up errors
-      _, err := solveDfs(nextNode, visitedStates, depth + 1)
+      _, err := solveDfs(nextNode, visitedStates, leaves, depth + 1)
       if err != nil {
         return curNode, err
       }

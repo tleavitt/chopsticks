@@ -1,8 +1,11 @@
 build:
 	go build .
 
-run:
+test: build
+	go test
+
+run: test
 	./chopsticks
 
-build-and-run: build
-	./chopsticks
+build-and-run: test
+	$(MAKE) run
