@@ -33,7 +33,10 @@ func normalizeHandForPlayer(h Hand, p *player) Hand {
 type playNode struct {
   gs *gameState
   score float32 // +1 means Player1 wins, -1 means Player2 wins
+  // Children nodes
   nextNodes map[move]*playNode
+  // Parent nodes
+  prevNodes map[move]*playNode
 }
 
 func getHeuristicScoreForPlayer(p *player) float32 {
@@ -91,6 +94,11 @@ func createPlayNodeReuseGs(gs *gameState) *playNode {
   return node
 }
 
+// Terminal states have one of the players eliminated; the game is over and no new moves are possible.
+func (node *playNode) isTerminal() bool {
+  return node.gs.player1.isEliminated() || node.gs.player2.isEliminated()
+}
+
 func (node *playNode) toString() string {
   return node.toStringImpl(0, 0, make(map[gameState]bool))
 }
@@ -106,8 +114,7 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f ", node.gs.toString(), node.score)) 
   printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
-    sb.WriteString("leafNode:\n")
-    sb.WriteString(node.gs.prettyString())
+    sb.WriteString("leafNode\n")
   } else {
     sb.WriteString("nextNodes:\n")
     for nextMove, nextNode := range node.nextNodes { 
@@ -128,6 +135,31 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   }
   sb.WriteString(buf + "}")
   return sb.String()
+}
+
+
+// Returns an error if any parent/child edge in the graph rooted at this node is not bi-directional
+func (node *playNode) validateEdges(recurse bool) error {
+  return node.validateEdgesImpl(recurse, make(map[gameState]bool))
+}
+
+func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameState]bool) {
+  // All parents of this node must list this node as a child
+  validatedStates[*node.gs] = true
+  for parentMove, parentNode := range node.prevNodes {
+    if parentNode.nextNodes[parentMove] != node {
+      return errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
+    }
+  }
+  for childMove, childNode := range node.nextNodes {
+    if childNode.prevNodes[childMove] != node {
+      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s", node.toTreeString(1), childNode.toString()))
+    }
+    if recurse && !validatedStates[*childNode.gs] {
+      childNode.validateEdgesImpl(recurse, validatedStates)
+    }
+  }
+
 }
 
 // ==== end playNode ==== 

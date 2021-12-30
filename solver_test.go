@@ -108,3 +108,11 @@ func TestSolveBestMoves(t *testing.T) {
     fmt.Println("Computer ran out of moves!")
   }
 }
+
+func TestExploreStates(t *testing.T) {
+  fmt.Println("starting TestExploreStates")
+  startState := gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  exploreStates(&startState, make(map[gameState]*playNode 38), 15)
+}

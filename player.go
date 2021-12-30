@@ -80,3 +80,22 @@ func (p *player) setHand(h Hand, value int8) *player {
 	}
 	return p
 }
+
+
+var DISTINCT_HANDS []Hand = []Hand{Left, Right}
+var LEFT_HAND []Hand = []Hand{Left}
+var RIGHT_HAND []Hand = []Hand{Right}
+
+// Returns the distinct hands that a player can use to play
+// WLOG if the player can use (i.e. play or receive) either hand, they always use their left hand.
+func (p *player) getDistinctPlayableHands() []Hand {
+	if p.isEliminated() {
+		return []Hand{} // Empty slice, no hands playable 
+	} else if p.lh == 0 {
+		return RIGHT_HAND
+	} else if p.rh == 0 || p.rh == p.lh {
+		return LEFT_HAND
+	} else {
+		return DISTINCT_HANDS
+	}
+}
