@@ -24,13 +24,14 @@ func (gs *gameState) normalize() *gameState {
   return gs
 }
 
+func (gs gameState) copyAndNormalize() *gameState {
+	return gs.normalize()
+}
+
 func (gs *gameState) isNormalized() bool {
 	return gs.player1.lh <= gs.player1.rh && gs.player2.lh <= gs.player2.rh
 }
 
-func (gs gameState) copyAndNormalize() *gameState {
-	return gs.normalize()
-}
 
 func (gs gameState) copyAndDenormalize(swapPlayer1 bool, swapPlayer2 bool) *gameState {
 	if swapPlayer1 {
@@ -130,8 +131,12 @@ func (gs *gameState) playMove(m move) (*gameState, error) {
 	return gs.playTurn(m.playHand, m.receiveHand)
 }
 
-func initGame() gameState {
-	return gameState{
+func (gs *gameState) isMoveValid(m move) bool {
+	return gs.getPlayer().getHand(m.playHand) != 0 && gs.getReceiver().getHand(m.receiveHand) != 0
+}
+
+func initGame() *gameState {
+	return &gameState{
 		player{1, 1},	
 		player{1, 1},	
 		Player1,	

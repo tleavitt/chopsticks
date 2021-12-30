@@ -71,3 +71,40 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   }
 }
 
+func TestSolveBestMoves(t *testing.T) {
+  fmt.Println("starting TestSolveBestMoves")
+  startState := gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  stateNode, _, _, err := solve(&startState)
+  if err != nil {
+    t.Fatal(err.Error())
+  }
+
+  var i int
+  var curNode = stateNode
+  var gameResult GameResult
+  for i, gameResult = 0, checkGameResult(curNode.gs); gameResult == Ongoing; i, gameResult = i+1, checkGameResult(curNode.gs) {
+    if len(curNode.nextNodes) == 0 {
+      fmt.Println("Hit leaf node, exiting")
+      break;
+    }
+    bestMove, _, err := curNode.getBestMoveAndScore(false)
+    if err != nil {
+      t.Fatal(err.Error())
+    }
+    node, ok := curNode.nextNodes[bestMove]
+    if !ok {
+      t.Fatalf("Best move not found in node states: %+v, %s", bestMove, curNode.toTreeString(1))
+    }
+    fmt.Printf("Previous node: %s, best move: %+v, next node: %s\n", curNode.toString(), bestMove, node.toString())
+    curNode = node
+  }
+  if gameResult == Player1Wins {
+    fmt.Println("Player 1 wins")
+  } else if gameResult == Player2Wins {
+    fmt.Println("Player 2 wins")
+  } else {
+    fmt.Println("Computer ran out of moves!")
+  }
+}

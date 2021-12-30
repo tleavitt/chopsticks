@@ -7,9 +7,12 @@ import (
   "strings"
   "github.com/urfave/cli"
   "errors"
+  "time"
 )
 
+// const DEBUG bool = true
 const DEBUG bool = true
+const INFO bool = true
 
 type GameResult int8
 const (
@@ -57,6 +60,7 @@ func validateGpsAndNode(gps *gamePlayState, curNode *playNode) error {
   }
 }
 
+
 func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
   fmt.Println("Your turn.")
   fmt.Println("What would you like to play?")
@@ -70,14 +74,25 @@ func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
 
   playerHand, err := stringInputToHand(playerMoveSlice[0]) 
   if err != nil {
-    return curNode, err
+    fmt.Printf("I don't recognize %s, please enter one of: LH->LH, LH->RH, RH->LH, RH->RH\n", playerMoveStr)
+    gps.state.prettyPrint()
+    return curNode, nil
   }
   receiverHand, err := stringInputToHand(playerMoveSlice[1]) 
   if err != nil {
-    return curNode, err
+    fmt.Printf("I don't recognize %s, please enter one of: LH->LH, LH->RH, RH->LH, RH->RH\n", playerMoveStr)
+    gps.state.prettyPrint()
+    return curNode, nil
   }
 
   playerMove := move{playerHand, receiverHand}
+  if !gps.state.isMoveValid(playerMove) {
+    // Print an error message and don't advance state.
+    fmt.Println("You can't do that, hands with zero fingers are out of play.")
+    gps.state.prettyPrint()
+    return curNode, nil
+  }
+
   fmt.Println("You played: " + playerMove.toString())
   normalizedPlayerMove, err := gps.playGameTurn(playerMove)
   if err != nil {
@@ -102,7 +117,7 @@ func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
 func runComputerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
   // Computer move
   // Need to normalize the guiGs in order to map the best move onto the current GUI
-  normalizedComputerMove, _, err := curNode.getBestMoveAndScore(true)
+  normalizedComputerMove, _, err := curNode.getBestMoveAndScore(DEBUG)
   if err != nil {
     return curNode, err
   }
@@ -149,9 +164,7 @@ func main() {
       },
     },
     Action: func(c *cli.Context) error {
-      gsVal := initGame()
-      gs := &gsVal
-
+      gs := initGame()
       var stateNode, _, _, solveErr = solve(gs)
       if solveErr != nil {
         fmt.Println("Error when solving: " + solveErr.Error())
@@ -175,6 +188,7 @@ func main() {
         if gps.state.turn == Player1 {
           stateNode, err = runPlayerTurn(gps, stateNode)  
         } else {
+          time.Sleep(1 * time.Second)
           stateNode, err = runComputerTurn(gps, stateNode)  
         }
         if err != nil {

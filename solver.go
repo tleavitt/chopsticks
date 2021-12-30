@@ -17,12 +17,16 @@ func getPossibleHands(p *player) []Hand {
   }
 }
 
+const DEFAULT_MAX_DEPTH int = 15
+
 func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*playNode, error) {
   visitedStates := make(map[gameState]*playNode, 5)
   leaves := make(map[gameState]*playNode, 5)
-  result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, leaves, 0)
+  result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, leaves, 0, DEFAULT_MAX_DEPTH)
   // fmt.Println(result.toString())
-  fmt.Println("Generated move tree with " + fmt.Sprint(len(visitedStates)) + " nodes " + fmt.Sprintf("(%d leaves).", len(leaves)))
+  if INFO {
+    fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves), root score: %f", len(visitedStates), len(leaves), result.score))
+  }
   return result, visitedStates, leaves, err
 }
 
@@ -49,7 +53,7 @@ func (node *playNode) getBestMoveAndScore(log bool) (move, float32, error) {
     }
   }
   if worstNextScoreForOpp > 1 || worstNextScoreForOpp < -1 {
-    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: play node is invalid: %+v", node))
+    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: play node is invalid: %+s; worst next score for opp: %f", node.toString(), worstNextScoreForOpp))
   } else {
     // Note the negative sign!! worst score for opp is the best score for us.
     if log {
@@ -59,7 +63,6 @@ func (node *playNode) getBestMoveAndScore(log bool) (move, float32, error) {
   }
 }
 
-const MAX_DEPTH int = 9
 
 // Global map for saving pointers to the frontier 
 // TODO: actually use?
@@ -69,7 +72,7 @@ const MAX_DEPTH int = 9
 // how do you detect and kill loops? - need to memoize game states.
 // there are redundant moves: [1,1],[1,1] should have one move, not four
 //
-func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int) (*playNode, error) {
+func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int, maxDepth int) (*playNode, error) {
   // First: check if we've visited this state before. If so, 
   // abort the recursion as we're in a loop. TODO: also allow picking up where
   // we left off??
@@ -90,7 +93,9 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves m
       return curNode, errors.New("invalid state: player eliminated when it's not their turn")
     }
     leaves[curGs] = curNode
-    fmt.Printf("-- Returning after eliminating player1. State %+v, score: %f\n", curNode.gs, curNode.score)
+    if DEBUG {
+      fmt.Printf("-- Returning after eliminating player1. State %+v, score: %f\n", curNode.gs, curNode.score)
+    }
     return curNode, nil
   } else if (curNode.gs.player2.isEliminated()) {
     curNode.score = 1
@@ -98,16 +103,20 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves m
       return curNode, errors.New("invalid state: player eliminated when it's not their turn")
     }
     leaves[curGs] = curNode
-    fmt.Printf("-- Returning after eliminating player2. State %+v, score: %f\n", curNode.gs, curNode.score)
+    if DEBUG {
+      fmt.Printf("-- Returning after eliminating player2. State %+v, score: %f\n", curNode.gs, curNode.score)
+    }
     return curNode, nil
   }
 
-  if depth >= MAX_DEPTH {
+  if depth >= maxDepth {
     // TODO: update frontier, set heuristic score, etc.
     // Let's set a heuristic score here: +/- 0.5 for every hand you/your opponent is missing
     curNode.score = curNode.getHeuristicScore()
     leaves[curGs] = curNode
-    fmt.Printf("-- Returning after reaching maxDepth. State %+v, score: %f\n", curNode.gs, curNode.score)
+    if DEBUG {
+      fmt.Printf("-- Returning after reaching maxDepth of %d. State %+v, score: %f\n", maxDepth, curNode.gs, curNode.score)
+    }
     return curNode, nil 
   }
 
@@ -140,13 +149,15 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves m
           return curNode, err
         }
 
+        // Make sure we normalize the state before looking it up
+        nextState.normalize()
         // HERE we have to check for possible loops, and if so, add the loop connection
         // in our graph and avoid recursing.
 
         existingNode, exists := visitedStates[*nextState]
         if exists {
           if DEBUG {
-            fmt.Printf(fmt.Sprintf("Found loop in move tree, not recursing further. CurNode: %s, loop move: %+v\n", curNode.toString(), curMove))
+            fmt.Printf(fmt.Sprintf("Found loop in move tree, not recursing further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, nextState))
           }
           curNode.nextNodes[curMove] = existingNode
           continue
@@ -157,7 +168,7 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves m
         curNode.nextNodes[curMove] = nextNode
       }
       // Recurse, and bubble up errors
-      _, err := solveDfs(nextNode, visitedStates, leaves, depth + 1)
+      _, err := solveDfs(nextNode, visitedStates, leaves, depth + 1, maxDepth)
       if err != nil {
         return curNode, err
       }

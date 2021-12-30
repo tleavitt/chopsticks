@@ -4,8 +4,8 @@ build:
 test: build
 	go test
 
-run: test
+run:
 	./chopsticks
 
-build-and-run: test
+build-and-run: build
 	$(MAKE) run
