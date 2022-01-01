@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "testing"
+  "errors"
 )
 
 func TestSolveTreeValid(t *testing.T) {
@@ -182,5 +183,60 @@ func TestInvalidGraphChild(t *testing.T) {
   // Should detect missing edge starting from son
   expectInvalidGraph(sonNode, t)
   fmt.Println("finished TestInvalidGraphChild")
+}
+
+func ensureAllNodesScored(root *playNode) error {
+  return ensureAllNodesScoredImpl(root, make(map[gameState]bool))
+}
+
+func ensureAllNodesScoredImpl(root *playNode, visitedStates map[gameState]bool) error {
+  if visitedStates[*root.gs] {
+    return nil
+  }
+  visitedStates[*root.gs] = true
+  if !root.isScored {
+    return errors.New("Found unscored node: " + root.toString())
+  }
+  for _, child := range root.nextNodes {
+    if err := ensureAllNodesScoredImpl(child, visitedStates); err != nil {
+      return err
+    }
+  }
+  return nil
+}
+
+func TestPropagateScores(t *testing.T) {
+  fmt.Println("starting TestPropagateScores")
+
+  grandpa := &gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  dad := &gameState{
+    player{1, 1}, player{1, 2}, Player2,
+  }
+  son := &gameState{
+    player{0, 1}, player{1, 2}, Player1,
+  }
+  grandpaNode := createPlayNodeCopyGs(grandpa)
+  dadNode := createPlayNodeCopyGs(dad)
+  sonNode := createPlayNodeCopyGs(son)
+
+  // Wire everything up
+  grandpaNode.nextNodes[move{Left, Left}] = dadNode
+  dadNode.prevNodes[move{Left, Left}] = grandpaNode
+
+  dadNode.nextNodes[move{Right, Left}] = sonNode
+  sonNode.prevNodes[move{Right, Left}] = dadNode
+
+  // Score
+  leaves := make(map[gameState]*playNode, 1)
+  leaves[*sonNode.gs] = sonNode
+  if err := propagateScores(leaves, 5); err != nil {
+    t.Fatal(err.Error())
+  }
+
+  ensureAllNodesScored(grandpaNode)
+
+  fmt.Println("starting TestPropagateScores")
 }
 

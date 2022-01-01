@@ -58,14 +58,14 @@ func createPlayNodeReuseGs(gs *gameState) *playNode {
 }
 
 // Scores
-func (node *playNode) computeScore() float, err {
+func (node *playNode) computeScore() (float32, error) {
   // If the node is a leaf: 
   if len(node.nextNodes) == 0 {
     // Determine the score directly
     return node.getHeuristicScore(), nil
   } else {
     // Compute the score based on child moves. 
-    _, score, err := node.getBestMoveAndScore()
+    _, score, err := node.getBestMoveAndScore(false)
     if err != nil {
       return 0, err
     }
@@ -73,7 +73,7 @@ func (node *playNode) computeScore() float, err {
   }
 }
 
-func (node *playNode) updateScore() err {
+func (node *playNode) updateScore() error {
   if score, err := node.computeScore(); err != nil {
     return err
   } else {
@@ -145,7 +145,8 @@ func (node *playNode) toTreeString(maxDepth int) string {
 }
 
 func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map[gameState]bool) string {
-  node.validateEdges(false)
+  // Would be nice to do this here but it could cause problems when debugging
+  // if node.validateEdges(false)
   var sb strings.Builder
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)

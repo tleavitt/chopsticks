@@ -7,16 +7,18 @@ import (
 )
 
 const DEFAULT_MAX_DEPTH int = 15
-
+// 
 func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*playNode, error) {
-  visitedStates := make(map[gameState]*playNode, 5)
-  leaves := make(map[gameState]*playNode, 5)
-  result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, leaves, 0, DEFAULT_MAX_DEPTH)
-  // fmt.Println(result.toString())
-  if INFO {
-    fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves), root score: %f", len(visitedStates), len(leaves), result.score))
-  }
-  return result, visitedStates, leaves, err
+  // visitedStates := make(map[gameState]*playNode, 5)
+  // leaves := make(map[gameState]*playNode, 5)
+  // result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, leaves, 0, DEFAULT_MAX_DEPTH)
+  // // fmt.Println(result.toString())
+  // if INFO {
+  //   fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves), root score: %f", len(visitedStates), len(leaves), result.score))
+  // }
+  // return result, visitedStates, leaves, err
+  // TOOD: implement me
+  return nil, nil, nil, nil
 }
 
 // Note: the node must not be a leaf (i.e. it must have children) or this function will fail
@@ -137,7 +139,6 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
 }
 
 func chanToString(ch <-chan *playNode) string {
-  close(ch)
   var sb strings.Builder
   sb.WriteString("chan{\n")
   for node := range ch {
@@ -157,7 +158,10 @@ func scoreAndEnqueueParents(node *playNode, frontier chan<- *playNode) error {
     fmt.Println("Computed score for node: " + node.toString())
   }
   for _, parentNode := range node.prevNodes {
-    frontier <- parentNode
+    // Safety belt: only enqueue nodes if they haven't been scored already
+    if !parentNode.isScored {
+      frontier <- parentNode
+    }
   }
   return nil
 }
@@ -180,8 +184,9 @@ func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
     }
   }
 
-  for loopCount, frontierHasValues := true; frontierHasValues; loopCount++ {
+  for loopCount, frontierHasValues := 0, true; frontierHasValues; loopCount++ {
     if loopCount > maxLoopCount {
+      close(frontier)
       return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + chanToString(frontier))
     }
     // Ugh it's kind of ugly to use channels as queues here
