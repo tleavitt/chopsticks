@@ -116,7 +116,7 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
           fmt.Printf(fmt.Sprintf("++ Found loop in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
         }
         curNode.nextNodes[curMove] = existingNode
-        existingNode.nextNodes[curMove] = existingNode
+        existingNode.prevNodes[curMove] = existingNode
       } else {
         // Add the parent/child pointers and recurse on the child
         curNode.nextNodes[curMove] = nextNode
