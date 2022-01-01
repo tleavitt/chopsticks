@@ -62,6 +62,11 @@ func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, m
 }
 
 
+func wireUpParentChildPointers(parent *playNode, child *childNode, m move) {
+  parent.nextNodes[m] = child 
+  child.prevNodes[m] = parent
+}
+
 func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, error) {
   curGs := *curNode.gs
   if visitedStates[curGs] != nil {
@@ -115,13 +120,10 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
         if DEBUG {
           fmt.Printf(fmt.Sprintf("++ Found loop in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
         }
-        curNode.nextNodes[curMove] = existingNode
-        existingNode.prevNodes[curMove] = existingNode
+        wireUpParentChildPointers(curNode, existingNode, curMove)
       } else {
         // Add the parent/child pointers and recurse on the child
-        curNode.nextNodes[curMove] = nextNode
-        nextNode.prevNodes[curMove] = curNode
-
+        wireUpParentChildPointers(curNode, existingNode, curMove)
         _, _, err := 
       }
     }
