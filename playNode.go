@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "strings"
+  "errors"
 )
 
 // ==== Move ==== 
@@ -80,15 +81,13 @@ func (node *playNode) scoreForCurrentPlayer() float32 {
 
 // ALWAYS copies the gamestate (I think??)
 func createPlayNodeCopyGs(gs *gameState) *playNode {
-  copyGs := *gs
-  node := &playNode{&copyGs, 0, make(map[move]*playNode)} 
-  node.gs.normalize()
+  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[move]*playNode)} 
   return node
 }
 
 // REUSES the gamestate, AND MUTATES THE ARGUMENT (I think??)
 func createPlayNodeReuseGs(gs *gameState) *playNode {
-  node := &playNode{gs, 0, make(map[move]*playNode)} 
+  node := &playNode{gs, 0, make(map[move]*playNode), make(map[move]*playNode)} 
   // MUTATES THE ARGUMENT
   node.gs.normalize()
   return node
@@ -111,10 +110,10 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   var sb strings.Builder
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)
-  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f ", node.gs.toString(), node.score)) 
+  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f prevNodes:%+v ", node.gs.toString(), node.score, node.prevNodes)) 
   printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
-    sb.WriteString("leafNode\n")
+    sb.WriteString("leafNode")
   } else {
     sb.WriteString("nextNodes:\n")
     for nextMove, nextNode := range node.nextNodes { 
@@ -138,28 +137,45 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
 }
 
 
-// Returns an error if any parent/child edge in the graph rooted at this node is not bi-directional
+// Returns an error if any parent/child edge in the graph containing this node is not bi-directional
 func (node *playNode) validateEdges(recurse bool) error {
   return node.validateEdgesImpl(recurse, make(map[gameState]bool))
 }
 
-func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameState]bool) {
+func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameState]bool) error {
+  if validatedStates[*node.gs] {
+    // We've visited this node before, return.
+    return nil
+  }
+
+  // All children of this node must list this node as a parent.
+  for childMove, childNode := range node.nextNodes {
+    if childNode.prevNodes[childMove] != node {
+      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s", node.toTreeString(1), childNode.toString()))
+    }
+    // Recurse down the graph
+    if recurse {
+      if err := childNode.validateEdgesImpl(recurse, validatedStates); err != nil {
+        return err
+      }
+    }
+  }
+
   // All parents of this node must list this node as a child
   validatedStates[*node.gs] = true
   for parentMove, parentNode := range node.prevNodes {
     if parentNode.nextNodes[parentMove] != node {
       return errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
     }
-  }
-  for childMove, childNode := range node.nextNodes {
-    if childNode.prevNodes[childMove] != node {
-      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s", node.toTreeString(1), childNode.toString()))
-    }
-    if recurse && !validatedStates[*childNode.gs] {
-      childNode.validateEdgesImpl(recurse, validatedStates)
+    // Recurse up the graph 
+    if recurse {
+      if err := parentNode.validateEdgesImpl(recurse, validatedStates); err != nil {
+        return err
+      }
     }
   }
 
+  return nil
 }
 
 // ==== end playNode ==== 

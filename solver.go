@@ -63,16 +63,16 @@ type exploreNode struct {
 // Once we're done, visitedStates will contain all new states we visited, and we'll return a list of leaf states. 
 // These could either be terminal states or require further exploration. We should start at these states when scoring
 // the play graph.
-func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (leaves map[gameState]*playNode, err error) {
+func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, error) {
   // Queue of states to explore
-  frontier := make(chan *exploreNode)
+  frontier := make(chan *exploreNode, 2147483647) // Maximum int32, needed otherwise pushing a value will block.... 
   // Add the start node to our frontier
   frontier <- &exploreNode{startNode, 0}
 
   leaves := make(map[gameState]*playNode, 4) // 4 is typically reasonable
 
   // Run breadth first search
-  for var frontierHasValues = false; _; frontierHasValues {
+  for frontierHasValues := true; frontierHasValues; {
     // Ugh it's kind of ugly to use channels as queues here
     select {
     case curExploreNode, ok := <-frontier:
@@ -80,9 +80,36 @@ func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, m
         // First, check that we haven't seen this state before
         curNode := curExploreNode.pn
         curGs := *curNode.gs
-        if visitedStates[curGs] != nil {
-          // We should catch loops before we enqueue things to the frontier, so error if we detect a loop
-          return nil, errors.New("Fronteir contains node we've seen before: " + curNode.toString())
+        if DEBUG {
+          fmt.Printf("Starting explore loop, got: %s, %d\n", curNode.toString(), curExploreNode.depth)
+        }
+        if existing := visitedStates[curGs]; existing != nil {
+          if DEBUG {
+            fmt.Printf("++ Frontier contains node we've seen before: %s\n", curNode.toString())
+          }
+          // This could happen if we enquque a state and then visit an identcal state before un-enqueueing.
+          // In that case we need to make sure the existing node has our same parents, but we should not
+          // explore again as we'll explore duplicates.
+          // Note: existingNode.prevNodes could also have more nodes
+          for parentMove, parentNode := range curNode.prevNodes {
+            // existing node needs to point to parent node, and parent node needs to point to existing node. 
+            // Sanity check: parent node->parentMove should point to curNode
+            if parentNode.nextNodes[parentMove] != curNode {
+              return nil, nil, errors.New(fmt.Sprintf("Parent node points to a child that does not list it as a parent: parent %s, child %s", parentNode.toString(), curNode.toString()))
+            }
+            parentNode.nextNodes[parentMove] = curNode
+            // I'm not sure if this is possible... don't return an error but log what's going on
+            if existingParent := existing.prevNodes[parentMove]; existingParent != nil {
+              fmt.Printf("++++ WARNING: Existing node has parent move from a different branch of the tree: existingParent %s, existingNode %s, cur parent %s\n", existingParent.toString(), existing.toString(), parentNode.toString())
+            }
+            existing.prevNodes[parentMove] = parentNode
+          }
+          // Sanity check
+          if len(curNode.nextNodes) > 0 {
+            return nil, nil, errors.New("Fronteir node has non-empty nextNodes: " + curNode.toString())
+          }
+          // Abandon this node.
+          continue
         } 
         // Memoize the current node now so we can catch loops in recursive calls...
         // TODO: is this problematic for score evaluation?
@@ -110,42 +137,43 @@ func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, m
                 // Make sure the gamestate gets copied....
                 nextState, err := curNode.gs.copyAndPlayTurn(playerHand, receiverHand)
                 if err != nil {
-                  return nil, err
+                  return nil, nil, err
                 }        
                 nextNode = createPlayNodeReuseGs(nextState)
               }
-            }
-            // Here we have to check for possible loops, and if so, add the loop connection
-            // in our graph and avoid looping further.
-            existingNode, exists := visitedStates[*nextNode.gs]
-            if exists {
-              // If the node already exists, just update our pointers and don't enqueue.
-              if DEBUG {
-                fmt.Printf(fmt.Sprintf("Found loop in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, nextNode.gs))
-              }
-              // This is a no-op if we've already explored this section of the graph.
-              curNode.nextNodes[curMove] = existingNode
-              existingNode.nextNodes[curMove] = existingNode
-            } else {
-              // Add the parent/child pointers and enqueue the child on the frontier 
-              curNode.nextNodes[curMove] = nextNode
-              nextNode.prevNodes[curMove] = curNode
+              // Here we have to check for possible loops, and if so, add the loop connection
+              // in our graph and avoid looping further.
+              existingNode, exists := visitedStates[*nextNode.gs]
+              if exists {
+                // If the node already exists, just update our pointers and don't enqueue.
+                if DEBUG {
+                  fmt.Printf(fmt.Sprintf("++ Found loop in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, nextNode.gs))
+                }
+                // This is a no-op if we've already explored this section of the graph.
+                curNode.nextNodes[curMove] = existingNode
+                existingNode.nextNodes[curMove] = existingNode
+              } else {
+                // Add the parent/child pointers and enqueue the child on the frontier 
+                curNode.nextNodes[curMove] = nextNode
+                nextNode.prevNodes[curMove] = curNode
 
-              frontier <- &exploreNode{nextNode, curExploreNode.depth + 1}
+                frontier <- &exploreNode{nextNode, curExploreNode.depth + 1}
+              }
             }
           }
         }
       } else {
-        return nil, errors.New("Frontier channel closed!")
+        return nil, nil, errors.New("Frontier channel closed!")
       }
     default:
       if DEBUG {
         fmt.Println("Exhausted states to explore")
       }
+      frontierHasValues = false // Terminate the loop
     }
   }
   // Search is done, return the leaves we found
-  return leaves, nil
+  return startNode, leaves, nil
 }
 
 // Problems with this:
@@ -206,11 +234,11 @@ func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves m
   receiver := curNode.gs.getReceiver()
 
 
-  for _, playerHand := range getPossibleHands(player) {
+  for _, playerHand := range player.getDistinctPlayableHands() {
     if player.getHand(playerHand) == 0 {
       continue
     }
-    for _, receiverHand := range getPossibleHands(receiver) {
+    for _, receiverHand := range receiver.getDistinctPlayableHands() {
       if receiver.getHand(receiverHand) == 0 {
         continue
       }

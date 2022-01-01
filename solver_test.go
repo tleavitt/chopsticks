@@ -111,8 +111,69 @@ func TestSolveBestMoves(t *testing.T) {
 
 func TestExploreStates(t *testing.T) {
   fmt.Println("starting TestExploreStates")
-  startState := gameState{
+  startState := &gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
-  exploreStates(&startState, make(map[gameState]*playNode 38), 15)
+  startNode, leaves, err := exploreStates(createPlayNodeCopyGs(startState), make(map[gameState]*playNode, 38), 15)
+  if err != nil {
+    t.Fatal(err)
+  }
+  for _, leafNode := range leaves {
+    if !leafNode.isTerminal() || len(leafNode.nextNodes) > 0 {
+      t.Fatalf("Non-terminal leaf node: %s", leafNode.toString())
+    }
+  }
+
+  // Yay it's broken...
+  if err := startNode.validateEdges(true); err != nil {
+    t.Fatal(err)
+  }
 }
+
+func expectInvalidGraph(startNode *playNode, t *testing.T) {
+  var err error
+  if err = startNode.validateEdges(true); err == nil {
+    t.Fatal("Expected validateEdges to error on invalid graph, but it did not")
+  }
+  fmt.Printf("Validate edges caught invalid graph: %s\n", err.Error())
+}
+
+func TestInvalidGraphParent(t *testing.T) {
+  fmt.Println("starting TestInvalidGraphParent")
+  startState := &gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  nextState := &gameState{
+    player{1, 1}, player{1, 2}, Player2,
+  }
+  startNode := createPlayNodeCopyGs(startState)
+  nextNode := createPlayNodeCopyGs(nextState)
+  // Only put one edge between startNode and nextNode
+  startNode.nextNodes[move{Left, Left}] = nextNode
+  expectInvalidGraph(startNode, t)
+}
+
+func TestInvalidGraphChild(t *testing.T) {
+  fmt.Println("starting TestInvalidGraphChild")
+  grandpa := &gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  dad := &gameState{
+    player{1, 1}, player{1, 2}, Player2,
+  }
+  son := &gameState{
+    player{0, 1}, player{1, 2}, Player1,
+  }
+  grandpaNode := createPlayNodeCopyGs(grandpa)
+  dadNode := createPlayNodeCopyGs(dad)
+  sonNode := createPlayNodeCopyGs(son)
+  // Grandpa node does not point to dad node:
+  dadNode.prevNodes[move{Left, Left}] = grandpaNode
+
+  dadNode.nextNodes[move{Right, Left}] = sonNode
+  sonNode.prevNodes[move{Right, Left}] = dadNode
+
+  // Should detect missing edge starting from son
+  expectInvalidGraph(sonNode, t)
+}
+
