@@ -3,8 +3,8 @@ package main
 import (
   "fmt"
   "errors"
+  "strings"
 )
-
 
 const DEFAULT_MAX_DEPTH int = 15
 
@@ -19,6 +19,7 @@ func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*pl
   return result, visitedStates, leaves, err
 }
 
+// Note: the node must not be a leaf (i.e. it must have children) or this function will fail
 func (node *playNode) getBestMoveAndScore(log bool) (move, float32, error) {
   // Our best move is the move that puts our opponent in the worst position.
   // The score of the current node is the negative of the score of our opponent in the node after our best move.
@@ -135,121 +136,78 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
   return curNode, leaves, nil
 }
 
-// Problems with this:
-// how do you detect and kill loops? - need to memoize game states.
-// there are redundant moves: [1,1],[1,1] should have one move, not four
-//
-func solveDfs(curNode *playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int, maxDepth int) (*playNode, error) {
-  // First: check if we've visited this state before. If so, 
-  // abort the recursion as we're in a loop. TODO: also allow picking up where
-  // we left off??
-  curGs := *curNode.gs
-  if visitedStates[curGs] != nil {
-    // We should catch loops before we make recursive calls, so error if we detect a loop
-    return curNode, errors.New("detected loop at beginning of recursive call: " + curNode.toString())
+func chanToString(ch <-chan *playNode) string {
+  close(ch)
+  var sb strings.Builder
+  sb.WriteString("chan{\n")
+  for node := range ch {
+    sb.WriteString(node.toString())
+    sb.WriteString("\n")
   }
-
-  // Memoize the current node now so we can catch loops in recursive calls...
-  // TODO: is this problematic for score evaluation?
-  visitedStates[curGs] = curNode
-
-  // If the game is over, determine the score and return
-  if (curNode.gs.player1.isEliminated()) {
-    curNode.score = -1
-    if curNode.gs.turn != Player1 {
-      return curNode, errors.New("invalid state: player eliminated when it's not their turn")
-    }
-    leaves[curGs] = curNode
-    if DEBUG {
-      fmt.Printf("-- Returning after eliminating player1. State %+v, score: %f\n", curNode.gs, curNode.score)
-    }
-    return curNode, nil
-  } else if (curNode.gs.player2.isEliminated()) {
-    curNode.score = 1
-    if curNode.gs.turn != Player2 {
-      return curNode, errors.New("invalid state: player eliminated when it's not their turn")
-    }
-    leaves[curGs] = curNode
-    if DEBUG {
-      fmt.Printf("-- Returning after eliminating player2. State %+v, score: %f\n", curNode.gs, curNode.score)
-    }
-    return curNode, nil
-  }
-
-  if depth >= maxDepth {
-    // TODO: update frontier, set heuristic score, etc.
-    // Let's set a heuristic score here: +/- 0.5 for every hand you/your opponent is missing
-    curNode.score = curNode.getHeuristicScore()
-    leaves[curGs] = curNode
-    if DEBUG {
-      fmt.Printf("-- Returning after reaching maxDepth of %d. State %+v, score: %f\n", maxDepth, curNode.gs, curNode.score)
-    }
-    return curNode, nil 
-  }
-
-  // Recursively check all legal moves.
-  // for playerHand
-  player := curNode.gs.getPlayer()
-  receiver := curNode.gs.getReceiver()
-
-
-  for _, playerHand := range player.getDistinctPlayableHands() {
-    if player.getHand(playerHand) == 0 {
-      continue
-    }
-    for _, receiverHand := range receiver.getDistinctPlayableHands() {
-      if receiver.getHand(receiverHand) == 0 {
-        continue
-      }
-      curMove := move{playerHand, receiverHand}
-      // A move is distinct if it leads to a distinct game state
-      var nextNode *playNode
-
-      // Check whether we've visited this node before
-      // TODO: trickiness around distinct moves here? what if we've visited the state but via a different move before?
-      if curNode.nextNodes[curMove] != nil {
-        nextNode = curNode.nextNodes[curMove]
-      } else {
-        // Make sure the gamestate gets copied....
-        nextState, err := curNode.gs.copyAndPlayTurn(playerHand, receiverHand)
-        if err != nil {
-          return curNode, err
-        }
-
-        // Make sure we normalize the state before looking it up
-        nextState.normalize()
-        // HERE we have to check for possible loops, and if so, add the loop connection
-        // in our graph and avoid recursing.
-
-        existingNode, exists := visitedStates[*nextState]
-        if exists {
-          if DEBUG {
-            fmt.Printf(fmt.Sprintf("Found loop in move tree, not recursing further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, nextState))
-          }
-          curNode.nextNodes[curMove] = existingNode
-          continue
-        }
-
-        // Add new state to cur state's children
-        nextNode = createPlayNodeReuseGs(nextState)
-        curNode.nextNodes[curMove] = nextNode
-      }
-      // Recurse, and bubble up errors
-      _, err := solveDfs(nextNode, visitedStates, leaves, depth + 1, maxDepth)
-      if err != nil {
-        return curNode, err
-      }
-    }
-  }
-
-
-  // We're done evaluating all children. Determine our score
-  _, curPlayerScore, err := curNode.getBestMoveAndScore(false)
-  if err != nil {
-    return curNode, err
-  }
-  // Note: curPlayerScore reflects score according to the current player, the absolute score needs to be adjusted (negative if player 2)
-  curNode.score = scoreForPlayerToAbsoluteScore(curPlayerScore, curNode.gs.turn)
-  return curNode, nil
+  sb.WriteString("}")
+  return sb.String()
 }
 
+
+func scoreAndEnqueueParents(node *playNode, frontier chan<- *playNode) error {
+  if err := node.updateScore(); err != nil {
+    return err
+  }
+  if DEBUG {
+    fmt.Println("Computed score for node: " + node.toString())
+  }
+  for _, parentNode := range node.prevNodes {
+    frontier <- parentNode
+  }
+  return nil
+}
+
+// Here we have to use BFS 
+// Goal after this function returns: all nodes that are scoreable have scores.
+// NOTE: if the leaves map is incomplete this function will go into an infinite loop
+// Todo: loop detection? 
+func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
+  // Queue of states to explore
+  frontier := make(chan *playNode, 2147483647) // Maximum int32, needed otherwise pushing a value will block....
+  // Score the leaves and add their immediate parents to the frontier
+  for _, leaf := range leaves {
+    // Safety belt:
+    if len(leaf.nextNodes) != 0 {
+      return errors.New("Not a leaf: " + leaf.toString()) 
+    }
+    if err := scoreAndEnqueueParents(leaf, frontier); err != nil {
+      return err
+    }
+  }
+
+  for loopCount, frontierHasValues := true; frontierHasValues; loopCount++ {
+    if loopCount > maxLoopCount {
+      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + chanToString(frontier))
+    }
+    // Ugh it's kind of ugly to use channels as queues here
+    select {
+    case curNode, ok := <-frontier:
+      if ok {
+        // A node can be scored iff all it's children have been scored.
+        if curNode.allChildrenAreScored() {
+          if err := scoreAndEnqueueParents(curNode, frontier); err != nil {
+            return err
+          }
+        } else {
+          // Put it back on the pile, if the leaves are complete we'll get to all it's children eventually
+          // Important: frontier NEEDS to be FIFO otherwise we won't make progress.
+          frontier <- curNode
+        }
+      } else {
+        return errors.New("Frontier channel closed!")
+      }
+    default:
+      if DEBUG {
+        fmt.Println("Exhausted states to explore")
+      }
+      frontierHasValues = false
+    }
+  }
+  // At this point all nodes should be scored
+  return nil
+}

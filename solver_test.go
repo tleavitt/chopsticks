@@ -16,6 +16,7 @@ func TestSolveTreeValid(t *testing.T) {
     t.Fatal(solveErr.Error())
   } 
   validateSolveNode(gps, stateNode, make(map[gameState]bool, len(existingStates)), existingStates, leaves, t)
+  fmt.Println("finished TestSolveTreeValid")
 }
 
 func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gameState]bool, 
@@ -107,6 +108,7 @@ func TestSolveBestMoves(t *testing.T) {
   } else {
     fmt.Println("Computer ran out of moves!")
   }
+  fmt.Println("finished TestSolveBestMoves")
 }
 
 func TestExploreStates(t *testing.T) {
@@ -128,6 +130,9 @@ func TestExploreStates(t *testing.T) {
   if err := startNode.validateEdges(true); err != nil {
     t.Fatal(err)
   }
+
+  fmt.Println(startNode.toTreeString(15))
+  fmt.Println("finished TestExploreStates")
 }
 
 func expectInvalidGraph(startNode *playNode, t *testing.T) {
@@ -151,6 +156,7 @@ func TestInvalidGraphParent(t *testing.T) {
   // Only put one edge between startNode and nextNode
   startNode.nextNodes[move{Left, Left}] = nextNode
   expectInvalidGraph(startNode, t)
+  fmt.Println("finished TestInvalidGraphParent")
 }
 
 func TestInvalidGraphChild(t *testing.T) {
@@ -175,5 +181,6 @@ func TestInvalidGraphChild(t *testing.T) {
 
   // Should detect missing edge starting from son
   expectInvalidGraph(sonNode, t)
+  fmt.Println("finished TestInvalidGraphChild")
 }
 

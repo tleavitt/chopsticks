@@ -38,6 +38,58 @@ type playNode struct {
   nextNodes map[move]*playNode
   // Parent nodes
   prevNodes map[move]*playNode
+  // Whether or not the score of this node has been computed. Needed for score propagation
+  isScored bool
+}
+
+// Construction
+// ALWAYS copies the gamestate (I think??)
+func createPlayNodeCopyGs(gs *gameState) *playNode {
+  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[move]*playNode), false} 
+  return node
+}
+
+// REUSES the gamestate, AND MUTATES THE ARGUMENT (I think??)
+func createPlayNodeReuseGs(gs *gameState) *playNode {
+  node := &playNode{gs, 0, make(map[move]*playNode), make(map[move]*playNode), false} 
+  // MUTATES THE ARGUMENT
+  node.gs.normalize()
+  return node
+}
+
+// Scores
+func (node *playNode) computeScore() float, err {
+  // If the node is a leaf: 
+  if len(node.nextNodes) == 0 {
+    // Determine the score directly
+    return node.getHeuristicScore(), nil
+  } else {
+    // Compute the score based on child moves. 
+    _, score, err := node.getBestMoveAndScore()
+    if err != nil {
+      return 0, err
+    }
+    return score, nil
+  }
+}
+
+func (node *playNode) updateScore() err {
+  if score, err := node.computeScore(); err != nil {
+    return err
+  } else {
+    node.score = score
+    node.isScored = true
+    return nil
+  }
+}
+
+func (node *playNode) allChildrenAreScored() bool {
+  for _, child := range node.nextNodes {
+    if !child.isScored {
+      return false
+    }
+  }
+  return true
 }
 
 func getHeuristicScoreForPlayer(p *player) float32 {
@@ -79,20 +131,6 @@ func (node *playNode) scoreForCurrentPlayer() float32 {
   return turnToSign(node.gs.turn) * node.score
 }
 
-// ALWAYS copies the gamestate (I think??)
-func createPlayNodeCopyGs(gs *gameState) *playNode {
-  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[move]*playNode)} 
-  return node
-}
-
-// REUSES the gamestate, AND MUTATES THE ARGUMENT (I think??)
-func createPlayNodeReuseGs(gs *gameState) *playNode {
-  node := &playNode{gs, 0, make(map[move]*playNode), make(map[move]*playNode)} 
-  // MUTATES THE ARGUMENT
-  node.gs.normalize()
-  return node
-}
-
 // Terminal states have one of the players eliminated; the game is over and no new moves are possible.
 func (node *playNode) isTerminal() bool {
   return node.gs.player1.isEliminated() || node.gs.player2.isEliminated()
@@ -107,13 +145,14 @@ func (node *playNode) toTreeString(maxDepth int) string {
 }
 
 func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map[gameState]bool) string {
+  node.validateEdges(false)
   var sb strings.Builder
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)
   sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f prevNodes:%+v ", node.gs.toString(), node.score, node.prevNodes)) 
   printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
-    sb.WriteString("leafNode")
+    sb.WriteString("leafNode}")
   } else {
     sb.WriteString("nextNodes:\n")
     for nextMove, nextNode := range node.nextNodes { 
@@ -131,15 +170,20 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
       }
       sb.WriteString("\n")
     } 
+    sb.WriteString(buf + "}")
   }
-  sb.WriteString(buf + "}")
   return sb.String()
 }
 
 
 // Returns an error if any parent/child edge in the graph containing this node is not bi-directional
 func (node *playNode) validateEdges(recurse bool) error {
-  return node.validateEdgesImpl(recurse, make(map[gameState]bool))
+  if recurse {
+    return node.validateEdgesImpl(true, make(map[gameState]bool))
+  } else {
+    // Avoid memory allocation if it's unnecessary
+    return node.validateEdgesImpl(false, nil)
+  }
 }
 
 func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameState]bool) error {
