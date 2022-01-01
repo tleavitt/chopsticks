@@ -9,16 +9,20 @@ import (
 const DEFAULT_MAX_DEPTH int = 15
 // 
 func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*playNode, error) {
-  // visitedStates := make(map[gameState]*playNode, 5)
-  // leaves := make(map[gameState]*playNode, 5)
-  // result, err := solveDfs(createPlayNodeCopyGs(gs), visitedStates, leaves, 0, DEFAULT_MAX_DEPTH)
-  // // fmt.Println(result.toString())
-  // if INFO {
-  //   fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves), root score: %f", len(visitedStates), len(leaves), result.score))
-  // }
-  // return result, visitedStates, leaves, err
-  // TOOD: implement me
-  return nil, nil, nil, nil
+  visitedStates := make(map[gameState]*playNode, 10)
+  // Step one: explore all possible states
+  root, leaves, err := exploreStates(createPlayNodeCopyGs(gs), visitedStates, DEFAULT_MAX_DEPTH)
+  if err != nil {
+    return nil, nil, nil, err
+  }
+  // Step two: propagate scores
+  if err := propagateScores(leaves, 5 * len(visitedStates)); err != nil {
+    return nil, nil, nil, err
+  }
+  if INFO {
+    fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves), root score: %f", len(visitedStates), len(leaves), root.score))
+  }
+  return root, visitedStates, leaves, err
 }
 
 // Note: the node must not be a leaf (i.e. it must have children) or this function will fail

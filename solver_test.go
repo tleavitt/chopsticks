@@ -40,12 +40,17 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   if !gps.normalizedState.equals(node.gs) {
     t.Fatalf("Normalized play state does not match node state: play state: %+v, node state: %+v", *gps.normalizedState, *node.gs)
   }
+
+  // Test three: node should be scored
+  if !node.isScored {
+    t.FatalF("Node is unscored: " + node.toString())
+  }
   // If this node has no children, then it should be a leaf:
   if len(node.nextNodes) == 0 {
     if leaves[*node.gs] == nil {
       t.Fatalf("Game state has no children but is not a leaf: %+v", *node.gs)
     }
-  } 
+  }
 
   // For each possilbe move in the node:
   for nextMove, nextNode := range node.nextNodes {
