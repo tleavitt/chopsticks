@@ -129,19 +129,6 @@ func runComputerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
 
   fmt.Println("I'll play: " + guiComputerMove.toString())
 
-  // // Invariant: normalize then play normalized then normalize should be the same as play then normalize
-  // if DEBUG {
-  //   gsNormalizePlayUnnorm, err := normalizedGs.playTurn(normalizedComputerMove.playHand, normalizedComputerMove.receiveHand)
-  //   if err != nil {
-  //     return curNode, err
-  //   }
-  //   gsNormalizePlay, _, _ := gsNormalizePlayUnnorm.copyAndNormalize()
-  //   gsPlayNormalize, _, _ := gsAfterComputer.copyAndNormalize()
-  //   if !gsNormalizePlay.equals(gsPlayNormalize) {
-  //     return guiGs, curNode, errors.New(fmt.Sprintf("Invariant violation: normalization and play do not compose: normalize then play: %+v, play then normalize: %+v", gsNormalizePlay, gsPlayNormalize))
-  //   }
-  // }
-
   nodeAfterComputer, okC := curNode.nextNodes[normalizedComputerMove]
   if !okC {
     return curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))

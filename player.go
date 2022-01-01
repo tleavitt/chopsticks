@@ -1,8 +1,19 @@
 package main
 
+import (
+	"fmt"
+)
 
 // var NUM_FINGERS int = 5
 var NUM_FINGERS int8 = 3
+
+// TODO: don't make this a global variable
+func setNumFingers(numFingers int8) int8 {
+	prevNumFingers := NUM_FINGERS
+	NUM_FINGERS = numFingers
+	fmt.Printf("Setting NUM_FINGERS to %d (previously %d)", NUM_FINGERS, prevNumFingers)
+	return prevNumFingers
+}
 
 type Hand int8
 

@@ -8,6 +8,7 @@ import (
 
 func TestSolveTreeValid(t *testing.T) {
   fmt.Println("starting TestSolveTreeValid")
+  prevNumFingers := setNumFingers(4)
   startState := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }
@@ -17,6 +18,7 @@ func TestSolveTreeValid(t *testing.T) {
     t.Fatal(solveErr.Error())
   } 
   validateSolveNode(gps, stateNode, make(map[gameState]bool, len(existingStates)), existingStates, leaves, t)
+  setNumFingers(prevNumFingers)
   fmt.Println("finished TestSolveTreeValid")
 }
 
@@ -43,7 +45,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
 
   // Test three: node should be scored
   if !node.isScored {
-    t.FatalF("Node is unscored: " + node.toString())
+    t.Fatal("Node is unscored: " + node.toString())
   }
   // If this node has no children, then it should be a leaf:
   if len(node.nextNodes) == 0 {
@@ -126,11 +128,12 @@ func TestExploreStates(t *testing.T) {
   if err != nil {
     t.Fatal(err)
   }
-  for _, leafNode := range leaves {
-    if !leafNode.isTerminal() || len(leafNode.nextNodes) > 0 {
-      t.Fatalf("Non-terminal leaf node: %s", leafNode.toString())
-    }
-  }
+  // Not necessarily the case with loops
+  // for _, leafNode := range leaves {
+  //   if !leafNode.isTerminal() || len(leafNode.nextNodes) > 0 {
+  //     t.Fatalf("Non-terminal leaf node: %s", leafNode.toString())
+  //   }
+  // }
 
   // Yay it's fixed now
   if err := startNode.validateEdges(true); err != nil {
@@ -210,7 +213,7 @@ func ensureAllNodesScoredImpl(root *playNode, visitedStates map[gameState]bool) 
   return nil
 }
 
-func TestPropagateScores(t *testing.T) {
+func TestPropagateScores1(t *testing.T) {
   fmt.Println("starting TestPropagateScores")
 
   grandpa := &gameState{
@@ -227,16 +230,14 @@ func TestPropagateScores(t *testing.T) {
   sonNode := createPlayNodeCopyGs(son)
 
   // Wire everything up
-  grandpaNode.nextNodes[move{Left, Left}] = dadNode
-  dadNode.prevNodes[move{Left, Left}] = grandpaNode
+  wireUpParentChildPointers(grandpaNode, dadNode, move{Left, Left})
 
-  dadNode.nextNodes[move{Right, Left}] = sonNode
-  sonNode.prevNodes[move{Right, Left}] = dadNode
+  wireUpParentChildPointers(dadNode, dadNode, move{Right, Left})
 
   // Score
   leaves := make(map[gameState]*playNode, 1)
   leaves[*sonNode.gs] = sonNode
-  if err := propagateScores(leaves, 5); err != nil {
+  if err := propagateScores(leaves, 5, 5); err != nil {
     t.Fatal(err.Error())
   }
 
@@ -245,3 +246,101 @@ func TestPropagateScores(t *testing.T) {
   fmt.Println("starting TestPropagateScores")
 }
 
+func TestPropagateScoresFork(t *testing.T) {
+  fmt.Println("starting TestPropagateScoresFork")
+
+  oneS := &gameState{
+    player{1, 2}, player{1, 2}, Player1,
+  }
+  twoS := &gameState{
+    player{1, 2}, player{1, 1}, Player2,
+  }
+  twoprimeS := &gameState{
+    player{1, 2}, player{1, 5}, Player2,
+  }
+  threeS := &gameState{
+    player{0, 1}, player{1, 2}, Player1,
+  }
+
+  one := createPlayNodeCopyGs(oneS)
+  two := createPlayNodeCopyGs(twoS)
+  twoprime := createPlayNodeCopyGs(twoprimeS)
+  three := createPlayNodeCopyGs(threeS)
+
+  // Wire everything up, note that moves don't actually matter here.
+  wireUpParentChildPointers(one, two, move{Right, Right})
+  wireUpParentChildPointers(one, twoprime, move{Right, Left})
+  wireUpParentChildPointers(two, three, move{Right, Right})
+  wireUpParentChildPointers(twoprime, three, move{Right, Left})
+
+  // Score
+  leaves := make(map[gameState]*playNode, 1)
+  leaves[*three.gs] = three
+  // Should require exactly two nodes on the frontier (two and two prime)
+  if err := propagateScores(leaves, 5, 2); err != nil {
+    t.Fatal(err.Error())
+  }
+
+  ensureAllNodesScored(one)
+
+  fmt.Println("starting TestPropagateScoresFork")
+}
+
+func TestExploreLoop(t *testing.T) {
+  fmt.Println("starting TestSolveTreeValid")
+  prevNumFingers := setNumFingers(5)
+  threeFourLoopStart := &gameState{
+    player{0, 4}, player{0, 3}, Player1,
+  } // All the rest are RH->RH
+
+
+
+  setNumFingers(prevNumFingers)
+}
+
+func TestPropagateScoresLoop(t *testing.T) {
+  fmt.Println("starting TestPropagateScoresLoop")
+
+  // The three-four loop:
+  entry := &gameState{
+    player{1, 4}, player{0, 3}, Player2,
+  }
+  // => RH->LH
+  one := &gameState{
+    player{0, 4}, player{0, 3}, Player1,
+  } // All the rest are RH->RH
+  two := &gameState{
+    player{0, 4}, player{0, 2}, Player2,
+  }
+  three := &gameState{
+    player{0, 1}, player{0, 2}, Player1,
+  }
+  four := &gameState{
+    player{0, 1}, player{0, 3}, Player2,
+  } // Then we loop back to one
+
+  entryNode := createPlayNodeCopyGs(entry)
+  oneNode := createPlayNodeCopyGs(one)
+  twoNode := createPlayNodeCopyGs(two)
+  threeNode := createPlayNodeCopyGs(three)
+  fourNode := createPlayNodeCopyGs(four)
+
+  // Wire everything up, note that moves don't actually matter here.
+  wireUpParentChildPointers(entryNode, oneNode, move{Right, Left})
+  wireUpParentChildPointers(oneNode, twoNode, move{Right, Right})
+  wireUpParentChildPointers(twoNode, threeNode, move{Right, Right})
+  wireUpParentChildPointers(threeNode, fourNode, move{Right, Right})
+  wireUpParentChildPointers(fourNode, oneNode, move{Right, Right})
+
+  // What are the leaves here?
+  leaves := make(map[gameState]*playNode, 1)
+  leaves[*fourNode.gs] = fourNode
+  // Should require exactly two nodes on the frontier (two and two prime)
+  if err := propagateScores(leaves, 7, 2); err != nil {
+    t.Fatal(err.Error())
+  }
+
+  ensureAllNodesScored(entryNode)
+
+  fmt.Println("starting TestPropagateScoresLoop")
+}

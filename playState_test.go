@@ -3,20 +3,7 @@ package main
 import (
   "fmt"
   "testing"
-  "os"
 )
-
-func TestMain(m *testing.M) {
-  // TERRIBLE HACK: don't make this a global variable
-  prevNumFingers := NUM_FINGERS
-  NUM_FINGERS = 3
-  fmt.Printf("Changing global NUM_FINGERS from %d to %d...\n", prevNumFingers, NUM_FINGERS)
-  code := m.Run() 
-  NUM_FINGERS = prevNumFingers
-  fmt.Printf("Changing global NUM_FINGERS back to %d.\n", NUM_FINGERS)
-  os.Exit(code)
-}
-
 
 func TestGamePlayStateDeepCopy(t *testing.T) {
   fmt.Println("starting TestGamePlayStateDeepCopy")

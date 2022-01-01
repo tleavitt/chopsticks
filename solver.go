@@ -15,12 +15,15 @@ func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*pl
   if err != nil {
     return nil, nil, nil, err
   }
+  if INFO {
+    fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves)", len(visitedStates), len(leaves)))
+  }
   // Step two: propagate scores
-  if err := propagateScores(leaves, 5 * len(visitedStates)); err != nil {
+  if err := propagateScores(leaves, 5 * len(visitedStates), 10 * len(visitedStates)); err != nil {
     return nil, nil, nil, err
   }
   if INFO {
-    fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves), root score: %f", len(visitedStates), len(leaves), root.score))
+    fmt.Println(fmt.Sprintf("Root score: %f", root.score))
   }
   return root, visitedStates, leaves, err
 }
@@ -75,7 +78,7 @@ func wireUpParentChildPointers(parent *playNode, child *playNode, m move) {
 
 // Breadth First Search is trickier here because you can't guarantee that starting an iteration with a node you've visited before is an error.
 // So you have to handle that case specially.
-func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, error) {
+func exploreStatesImpl(curNode *playNode, curPath map[gameState]bool, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, error) {
   curGs := *curNode.gs
   if visitedStates[curGs] != nil {
     // We should always catch loops before we make recursive calls, so error if we detect a loop
@@ -115,18 +118,27 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
       }        
       nextNode := createPlayNodeReuseGs(nextState)
 
-      // Here we have to check for possible loops, and if so, add the loop connection
-      // in our graph and avoid recursing further.
+      // Here we have to check for possible intersections and loops. 
+      // An intersection is when the current path leads to a state we've already explored somewhere else in our search.
+      // A loop is an intersection where the existing state is on our current path.
+      // If we find an intersection, we need to add parent/child pointers from the curNode to the existing node to complete
+      // the graph
+      // In addition, if we find a loop, we need to mark the current node as a "leaf" so we can score it directly later. Otherwise
+      // the scoring step will never finish because the parents of the loop will never have all of their children scored.
+      // TODO: more correct from a scoring perspective would be to collapse all loops into single "supernodes" from a scoring perspective. 
+      // (although turns become tricky there...)
+      // All nodes in a supernode would get the same score (?)
+      // Note that loops necessarily must have the same number of hands throughout so they will have the same heuristic score.
       existingNode, exists := visitedStates[*nextNode.gs]
       if exists {
         // Sanity check
         if !existingNode.gs.equals(nextNode.gs) {
           return nil, nil, errors.New(fmt.Sprintf("Visiting states map is corrupt: visitedStates[%+v] = %s", nextNode.gs, existingNode.toString()))
         }
-        // If the node already exists, we've looped around to it. Update it's pointers but don't recurse.
         if DEBUG {
-          fmt.Printf(fmt.Sprintf("++ Found loop in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
+          fmt.Printf(fmt.Sprintf("++ Found loop in move tree, marking current node as leaf and not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
         }
+        leaves[curGs] = curNode
         wireUpParentChildPointers(curNode, existingNode, curMove)
       } else {
         // Add the parent/child pointers and recurse on the child
@@ -174,9 +186,10 @@ func scoreAndEnqueueParents(node *playNode, frontier chan<- *playNode) error {
 // Goal after this function returns: all nodes that are scoreable have scores.
 // NOTE: if the leaves map is incomplete this function will go into an infinite loop
 // Todo: loop detection? 
-func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
+func propagateScores(leaves map[gameState]*playNode, maxLoopCount int, frontierSize int) error {
+  fmt.Println("Started propagateScores")
   // Queue of states to explore
-  frontier := make(chan *playNode, 2147483647) // Maximum int32, needed otherwise pushing a value will block....
+  frontier := make(chan *playNode, frontierSize) // Maximum int32, needed otherwise pushing a value will block....
   // Score the leaves and add their immediate parents to the frontier
   for _, leaf := range leaves {
     // Safety belt:
@@ -197,6 +210,10 @@ func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
     select {
     case curNode, ok := <-frontier:
       if ok {
+        // If this node is already scored, skip this step. It's parents have already been enqueued in a previous iteration.
+        if curNode.isScored {
+          continue
+        }
         // A node can be scored iff all it's children have been scored.
         if curNode.allChildrenAreScored() {
           if err := scoreAndEnqueueParents(curNode, frontier); err != nil {
