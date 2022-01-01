@@ -124,7 +124,7 @@ func TestExploreStates(t *testing.T) {
     }
   }
 
-  // Yay it's broken...
+  // Yay it's fixed now
   if err := startNode.validateEdges(true); err != nil {
     t.Fatal(err)
   }

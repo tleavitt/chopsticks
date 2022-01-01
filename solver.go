@@ -61,22 +61,22 @@ func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, m
   return exploreStatesImpl(startNode, visitedStates, make(map[gameState]*playNode, 4), 0, maxDepth)
 }
 
-
-func wireUpParentChildPointers(parent *playNode, child *childNode, m move) {
+func wireUpParentChildPointers(parent *playNode, child *playNode, m move) {
   parent.nextNodes[m] = child 
   child.prevNodes[m] = parent
 }
 
+// Breadth First Search is trickier here because you can't guarantee that starting an iteration with a node you've visited before is an error.
+// So you have to handle that case specially.
 func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, error) {
   curGs := *curNode.gs
   if visitedStates[curGs] != nil {
-    // We should catch loops before we make recursive calls, so error if we detect a loop
+    // We should always catch loops before we make recursive calls, so error if we detect a loop
     return nil, nil, errors.New("detected loop at beginning of recursive call: " + curNode.toString())
   }
 
   // Memoize the current node now so we can catch loops in recursive calls.
   visitedStates[curGs] = curNode
-
 
   if DEBUG {
     fmt.Printf("Exploring node: %s, depth: %d\n", curNode.toString(), depth)
@@ -88,7 +88,7 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
   }
 
   // Check for terminal states:
-  if curNode.isTerminal() || curExploreNode.depth >= maxDepth {
+  if curNode.isTerminal() || depth >= maxDepth {
     // This is a leaf node, add it to our output collection and continue
       if DEBUG {
         fmt.Printf(fmt.Sprintf("Found leaf node, not exploring further. cur state: %+v\n", curNode.gs))
@@ -123,13 +123,16 @@ func exploreStatesImpl(curNode *playNode, visitedStates map[gameState]*playNode,
         wireUpParentChildPointers(curNode, existingNode, curMove)
       } else {
         // Add the parent/child pointers and recurse on the child
-        wireUpParentChildPointers(curNode, existingNode, curMove)
-        _, _, err := 
+        wireUpParentChildPointers(curNode, nextNode, curMove)
+        _, _, err := exploreStatesImpl(nextNode, visitedStates, leaves, depth + 1, maxDepth)
+        if err != nil {
+          return nil, nil, err
+        }
       }
     }
   }
   // Search is done, return the leaves we found
-  return startNode, leaves, nil
+  return curNode, leaves, nil
 }
 
 // Problems with this:
