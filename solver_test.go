@@ -121,12 +121,24 @@ func TestSolveBestMoves(t *testing.T) {
 
 func TestExploreStates(t *testing.T) {
   fmt.Println("starting TestExploreStates")
+  prevNumFingers := setNumFingers(4)
   startState := &gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
-  startNode, leaves, err := exploreStates(createPlayNodeCopyGs(startState), make(map[gameState]*playNode, 38), 15)
+  visitedStates := make(map[gameState]*playNode, 38)
+  startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, 15)
   if err != nil {
     t.Fatal(err)
+  }
+  fmt.Printf("Num states; %d\n", len(visitedStates))
+  fmt.Printf("Leaves: %+v\n", leaves)
+  fmt.Printf("Loops: %+v\n", loops)
+  fmt.Println("Loops:")
+  for _, loop := range loops {
+    for _, node := range loop {
+      fmt.Printf("%s, ", node.gs.toString())
+    }
+    fmt.Printf("\n")
   }
   // Not necessarily the case with loops
   // for _, leafNode := range leaves {
@@ -140,7 +152,8 @@ func TestExploreStates(t *testing.T) {
     t.Fatal(err)
   }
 
-  fmt.Println(startNode.toTreeString(15))
+  // fmt.Println(startNode.toTreeString(15))
+  setNumFingers(prevNumFingers)
   fmt.Println("finished TestExploreStates")
 }
 
@@ -289,9 +302,9 @@ func TestPropagateScoresFork(t *testing.T) {
 func TestExploreLoop(t *testing.T) {
   fmt.Println("starting TestSolveTreeValid")
   prevNumFingers := setNumFingers(5)
-  threeFourLoopStart := &gameState{
-    player{0, 4}, player{0, 3}, Player1,
-  } // All the rest are RH->RH
+  // threeFourLoopStart := &gameState{
+  //   player{0, 4}, player{0, 3}, Player1,
+  // } // All the rest are RH->RH
 
 
 
