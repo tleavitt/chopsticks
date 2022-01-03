@@ -37,9 +37,23 @@ type playNode struct {
   // Children nodes
   nextNodes map[move]*playNode
   // Parent nodes
-  prevNodes map[move]*playNode
+  // NOTE: this has to be a gameState map because there can be multiple distinct
+  // parent states that lead to the same child state with the same move. Example:
+  // {{3, 3}, {0, 2}, Player2} - {Left, Right} -> {{1, 3}, {0, 2} Player1}
+  // {{1, 1}, {0, 2}, Player2} - {Left, Right} -> {{1, 3}, {0, 2} Player1}
+  prevNodes map[gameState]*playNode
   // Whether or not the score of this node has been computed. Needed for score propagation
   isScored bool
+}
+
+func nodeMapToString(nodeMap map[move]*playNode) string {
+  var sb strings.Builder
+  sb.WriteString("{")
+  for m, n := range nodeMap {
+    sb.WriteString(fmt.Sprintf("%+v:%s, ", m, n.toString()))
+  }
+  sb.WriteString("}")
+  return sb.String()
 }
 
 // Construction
@@ -176,6 +190,28 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   return sb.String()
 }
 
+// Returns the move that takes the map to the given node, or nil if the given node is not a value in the map.
+func findNodeInMap(node *playNode nodeMap map[move]*playNode) *move {
+  for m, n := range nodeMap {
+    if n == node {
+      return m
+    }
+  }
+  return nil
+}
+
+func addParentChildEdges(parent *playNode, child *playNode, m move) {
+  addParentEdge(parent, child, m)
+  addChildEdge(parent, child)
+}
+
+func addParentEdge(parent *playNode, child *playNode, m move) {
+  parent.nextNodes[m] = child 
+}
+
+func addChildEdge(parent *playNode, child *playNode) {
+  child.prevNodes[*parent.gs] = parent
+}
 
 // Returns an error if any parent/child edge in the graph containing this node is not bi-directional
 func (node *playNode) validateEdges(recurse bool) error {
@@ -198,9 +234,9 @@ func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameSt
   }
 
   // All children of this node must list this node as a parent.
-  for childMove, childNode := range node.nextNodes {
-    if childNode.prevNodes[childMove] != node {
-      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s", node.toTreeString(1), childNode.toString()))
+  for _, childNode := range node.nextNodes {
+    if childNode.prevNodes[*node.gs] != node {
+      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s, child prev nodes: %+v", node.toTreeString(1), childNode.toString(), nodeMapToString(childNode.prevNodes)))
     }
     // Recurse down the graph
     if recurse {
@@ -212,8 +248,9 @@ func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameSt
 
   // All parents of this node must list this node as a child
   validatedStates[*node.gs] = true
-  for parentMove, parentNode := range node.prevNodes {
-    if parentNode.nextNodes[parentMove] != node {
+  for _, parentNode := range node.prevNodes {
+    parentMove := findNodeInMap(node, parentNode.nextNodes)
+    if == nil {
       return errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
     }
     // Recurse up the graph 

@@ -71,10 +71,6 @@ func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, m
   return exploreStatesImpl(startNode, []*playNode{startNode}, make(map[gameState]*playNode, 4), make(map[gameState]*playNode, 4), make(map[gameState][]*playNode, 4), 0, maxDepth)
 }
 
-func wireUpParentChildPointers(parent *playNode, child *playNode, m move) {
-  parent.nextNodes[m] = child 
-  child.prevNodes[m] = parent
-}
 
 // Yes, O(N) search. Whatever, it's probably fine
 func findNodeInPath(node *playNode, path []*playNode) int {
@@ -153,7 +149,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
         if DEBUG {
           fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, marking current node as leaf and not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
         }
-        wireUpParentChildPointers(curNode, existingNode, curMove)
+        addParentChildEdges(curNode, existingNode, curMove)
         // Check for loops
         if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
           curLoop := copyPath(curPath[loopIdx:])
@@ -164,7 +160,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
         }
       } else {
         // Add the parent/child pointers and recurse on the child
-        wireUpParentChildPointers(curNode, nextNode, curMove)
+        addParentChildEdges(curNode, nextNode, curMove)
         // append the latest node to our current path
         oldLen := len(curPath)
         nextPath := append(curPath, nextNode)

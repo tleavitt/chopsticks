@@ -244,10 +244,9 @@ func TestInvalidGraphChild(t *testing.T) {
   dadNode := createPlayNodeCopyGs(dad)
   sonNode := createPlayNodeCopyGs(son)
   // Grandpa node does not point to dad node:
-  dadNode.prevNodes[move{Left, Left}] = grandpaNode
+  addChildEdge(grandpaNode, dadNode)
 
-  dadNode.nextNodes[move{Right, Left}] = sonNode
-  sonNode.prevNodes[move{Right, Left}] = dadNode
+  addParentChildEdges(dadNode, sonNode, move{Right, Left})
 
   // Should detect missing edge starting from son
   expectInvalidGraph(sonNode, t)
@@ -291,9 +290,9 @@ func TestPropagateScores1(t *testing.T) {
   sonNode := createPlayNodeCopyGs(son)
 
   // Wire everything up
-  wireUpParentChildPointers(grandpaNode, dadNode, move{Left, Left})
+  addParentChildEdges(grandpaNode, dadNode, move{Left, Left})
 
-  wireUpParentChildPointers(dadNode, dadNode, move{Right, Left})
+  addParentChildEdges(dadNode, dadNode, move{Right, Left})
 
   // Score
   leaves := make(map[gameState]*playNode, 1)
@@ -329,10 +328,10 @@ func TestPropagateScoresFork(t *testing.T) {
   three := createPlayNodeCopyGs(threeS)
 
   // Wire everything up, note that moves don't actually matter here.
-  wireUpParentChildPointers(one, two, move{Right, Right})
-  wireUpParentChildPointers(one, twoprime, move{Right, Left})
-  wireUpParentChildPointers(two, three, move{Right, Right})
-  wireUpParentChildPointers(twoprime, three, move{Right, Left})
+  addParentChildEdges(one, two, move{Right, Right})
+  addParentChildEdges(one, twoprime, move{Right, Left})
+  addParentChildEdges(two, three, move{Right, Right})
+  addParentChildEdges(twoprime, three, move{Right, Left})
 
   // Score
   leaves := make(map[gameState]*playNode, 1)
@@ -375,11 +374,11 @@ func TestPropagateScoresLoop(t *testing.T) {
   fourNode := createPlayNodeCopyGs(four)
 
   // Wire everything up, note that moves don't actually matter here.
-  wireUpParentChildPointers(entryNode, oneNode, move{Right, Left})
-  wireUpParentChildPointers(oneNode, twoNode, move{Right, Right})
-  wireUpParentChildPointers(twoNode, threeNode, move{Right, Right})
-  wireUpParentChildPointers(threeNode, fourNode, move{Right, Right})
-  wireUpParentChildPointers(fourNode, oneNode, move{Right, Right})
+  addParentChildEdges(entryNode, oneNode, move{Right, Left})
+  addParentChildEdges(oneNode, twoNode, move{Right, Right})
+  addParentChildEdges(twoNode, threeNode, move{Right, Right})
+  addParentChildEdges(threeNode, fourNode, move{Right, Right})
+  addParentChildEdges(fourNode, oneNode, move{Right, Right})
 
   // What are the leaves here?
   leaves := make(map[gameState]*playNode, 1)
