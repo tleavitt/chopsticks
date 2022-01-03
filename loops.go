@@ -1,10 +1,6 @@
 package main
 
-import (
-  "fmt"
-  "errors"
-  "strings"
-)
+import ()
 
 // Node for the loop metagraphs on top of the playNode graph
 type loopNode struct {
@@ -15,14 +11,14 @@ type loopNode struct {
 }
 
 // Loop graphs are simply a pointer to the head loop node.
-type loopGraph {
+type loopGraph struct {
   head *loopNode
 };
 
 // Generics would be nice here...
 func addForwardBackwardEdges(parent *loopNode, child *loopNode) {
-  addForwardEdge(parent, child, m)
-  addChildEdge(parent, child)
+  addForwardEdge(parent, child)
+  addBackwardEdge(parent, child)
 }
 
 func addForwardEdge(parent *loopNode, child *loopNode) {
@@ -30,19 +26,19 @@ func addForwardEdge(parent *loopNode, child *loopNode) {
 }
 
 func addBackwardEdge(parent *loopNode, child *loopNode) {
-  child.prevNodes[*parent] = true
+  child.prevNodes[parent] = true
 }
 
 func createAndSetupLoopNode(pn *playNode, lg *loopGraph) *loopNode {
   ln := &loopNode{
-    pn, lg, make(map[move]*loopNode, 1), make(map[gameState]*loopNode, 1)
+    pn, lg, make(map[*loopNode]bool, 1), make(map[*loopNode]bool, 1),
   }
   pn.ln = ln
   return ln
 }
 
 func createEmptyLoopGraph() *loopGraph {
-  return &loopGraph{nil}
+  return &loopGraph{nil,}
 }
 
 func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
@@ -59,7 +55,7 @@ func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
 func createDistinctLoopGraphs(loops map[gameState][]*playNode) map[*loopGraph]bool {
   loopGraphs := make(map[*loopGraph]bool, len(loops))
   for _, loop := range loops {
-    var curLoopGraph := createEmptyLoopGraph() 
+    var curLoopGraph = createEmptyLoopGraph() 
     var prevLoopNode *loopNode = nil
     loopGraphs[curLoopGraph] = true
 
@@ -70,7 +66,7 @@ func createDistinctLoopGraphs(loops map[gameState][]*playNode) map[*loopGraph]bo
         // Remove the current loop graph and use the existing one
         delete(loopGraphs, curLoopGraph)
         // Set all the loop graph nodes in the current loop to the new loop graph
-        existingLoopGraph = pn.ln.lg
+        existingLoopGraph := pn.ln.lg
         head := curLoopGraph.head
         setNewLoopGraphForAll(head, existingLoopGraph)
 
@@ -84,7 +80,7 @@ func createDistinctLoopGraphs(loops map[gameState][]*playNode) map[*loopGraph]bo
 
       if it == 0 {
         // First node in the loop, make it the head
-        curLoopGraph.ln = curLoopNode
+        curLoopGraph.head = curLoopNode
       } else {
         addForwardBackwardEdges(prevLoopNode, curLoopNode)
       }

@@ -3,7 +3,6 @@ package main
 import (
   "fmt"
   "errors"
-  "strings"
 )
 
 // DFS exploration of all states at a certain depth from the given start node. 

@@ -3,7 +3,6 @@ package main
 import (
   "fmt"
   "errors"
-  "strings"
 )
 
 const DEFAULT_MAX_DEPTH int = 15
@@ -38,8 +37,8 @@ func (node *playNode) getBestMoveAndScore(log bool) (move, float32, error) {
     fmt.Printf("-- Running getBestMoveAndScore() for %+v\n", node.gs)
   }
   for nextMove, nextNode := range node.nextNodes {
-    if !nexNode.isScored {
-      return bestMoveForUs, 0, errors.New(fmt.Sprintf("Child node is not scored: %s"), nextNode.toString())
+    if !nextNode.isScored {
+      return bestMoveForUs, 0, errors.New(fmt.Sprintf("Child node is not scored: %s", nextNode.toString()))
     }
     oppScore := nextNode.scoreForCurrentPlayer() 
     if log {
