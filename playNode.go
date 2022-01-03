@@ -46,7 +46,18 @@ type playNode struct {
   isScored bool
 }
 
-func nodeMapToString(nodeMap map[move]*playNode) string {
+// Go needs generics dammit
+func nodeMoveMapToString(nodeMap map[move]*playNode) string {
+  var sb strings.Builder
+  sb.WriteString("{")
+  for m, n := range nodeMap {
+    sb.WriteString(fmt.Sprintf("%+v:%s, ", m, n.toString()))
+  }
+  sb.WriteString("}")
+  return sb.String()
+}
+
+func nodeStateMapToString(nodeMap map[gameState]*playNode) string {
   var sb strings.Builder
   sb.WriteString("{")
   for m, n := range nodeMap {
@@ -59,13 +70,13 @@ func nodeMapToString(nodeMap map[move]*playNode) string {
 // Construction
 // ALWAYS copies the gamestate (I think??)
 func createPlayNodeCopyGs(gs *gameState) *playNode {
-  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[move]*playNode), false} 
+  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[gameState]*playNode), false} 
   return node
 }
 
 // REUSES the gamestate, AND MUTATES THE ARGUMENT (I think??)
 func createPlayNodeReuseGs(gs *gameState) *playNode {
-  node := &playNode{gs, 0, make(map[move]*playNode), make(map[move]*playNode), false} 
+  node := &playNode{gs, 0, make(map[move]*playNode), make(map[gameState]*playNode), false} 
   // MUTATES THE ARGUMENT
   node.gs.normalize()
   return node
@@ -191,10 +202,10 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
 }
 
 // Returns the move that takes the map to the given node, or nil if the given node is not a value in the map.
-func findNodeInMap(node *playNode nodeMap map[move]*playNode) *move {
+func findNodeInMap(node *playNode, nodeMap map[move]*playNode) *move {
   for m, n := range nodeMap {
     if n == node {
-      return m
+      return &m
     }
   }
   return nil
@@ -236,7 +247,7 @@ func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameSt
   // All children of this node must list this node as a parent.
   for _, childNode := range node.nextNodes {
     if childNode.prevNodes[*node.gs] != node {
-      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s, child prev nodes: %+v", node.toTreeString(1), childNode.toString(), nodeMapToString(childNode.prevNodes)))
+      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s, child prev nodes: %+v", node.toTreeString(1), childNode.toString(), nodeStateMapToString(childNode.prevNodes)))
     }
     // Recurse down the graph
     if recurse {
@@ -250,7 +261,7 @@ func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameSt
   validatedStates[*node.gs] = true
   for _, parentNode := range node.prevNodes {
     parentMove := findNodeInMap(node, parentNode.nextNodes)
-    if == nil {
+    if parentMove == nil {
       return errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
     }
     // Recurse up the graph 
