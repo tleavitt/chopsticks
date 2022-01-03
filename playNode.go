@@ -193,6 +193,10 @@ func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameSt
     return nil
   }
 
+  if validatedStates != nil {
+    validatedStates[*node.gs] = true
+  }
+
   // All children of this node must list this node as a parent.
   for childMove, childNode := range node.nextNodes {
     if childNode.prevNodes[childMove] != node {

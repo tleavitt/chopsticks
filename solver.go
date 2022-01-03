@@ -95,6 +95,10 @@ func copyPath(path []*playNode) []*playNode {
 
 
 func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, loops map[gameState][]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, map[gameState][]*playNode, error) {
+  // Sanity check: curNode should be the last node of the path
+  if curPath[len(curPath) - 1] != curNode {
+    return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))
+  }
   curGs := *curNode.gs
   if visitedStates[curGs] != nil {
     // We should always catch intersections before we make recursive calls, so error if we detect an intersection
@@ -154,7 +158,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
         if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
           curLoop := copyPath(curPath[loopIdx:])
           if DEBUG {
-            fmt.Printf(fmt.Sprintf("++++ Found LOOP in move tree, saving loop for later: %+v", curLoop))
+            fmt.Printf(fmt.Sprintf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop))
           }
           loops[*existingNode.gs] = curLoop
         }
@@ -163,8 +167,8 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
         wireUpParentChildPointers(curNode, nextNode, curMove)
         // append the latest node to our current path
         oldLen := len(curPath)
-        curPath = append(curPath, curNode)
-        _, _, _, err := exploreStatesImpl(nextNode, curPath, visitedStates, leaves, loops, depth + 1, maxDepth)
+        nextPath := append(curPath, nextNode)
+        _, _, _, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, depth + 1, maxDepth)
         if err != nil {
           return nil, nil, nil, err
         }

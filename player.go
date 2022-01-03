@@ -11,7 +11,7 @@ var NUM_FINGERS int8 = 3
 func setNumFingers(numFingers int8) int8 {
 	prevNumFingers := NUM_FINGERS
 	NUM_FINGERS = numFingers
-	fmt.Printf("Setting NUM_FINGERS to %d (previously %d)", NUM_FINGERS, prevNumFingers)
+	fmt.Printf("Setting NUM_FINGERS to %d (previously %d)\n", NUM_FINGERS, prevNumFingers)
 	return prevNumFingers
 }
 
