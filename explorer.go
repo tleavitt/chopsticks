@@ -10,8 +10,8 @@ import (
 // These could either be terminal states or require further exploration. We should start at these states when scoring
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
-func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, map[gameState][]*playNode, error) {
-  return exploreStatesImpl(startNode, []*playNode{startNode}, make(map[gameState]*playNode, 4), make(map[gameState]*playNode, 4), make(map[gameState][]*playNode, 4), 0, maxDepth)
+func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
+  return exploreStatesImpl(startNode, []*playNode{startNode}, make(map[gameState]*playNode, 4), make(map[gameState]*playNode, 4), make([][]*playNode, 0), 0, maxDepth)
 }
 
 // Yes, O(N) search. Whatever, it's probably fine
@@ -32,7 +32,7 @@ func copyPath(path []*playNode) []*playNode {
 }
 
 
-func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, loops map[gameState][]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, map[gameState][]*playNode, error) {
+func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, loops [][]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
   // Sanity check: curNode should be the last node of the path
   if curPath[len(curPath) - 1] != curNode {
     return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))
@@ -96,9 +96,13 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
         if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
           curLoop := copyPath(curPath[loopIdx:])
           if DEBUG {
-            fmt.Printf(fmt.Sprintf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop))
+            fmt.Printf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop)
+            fmt.Printf("Current loops: %+v\n", loops)
           }
-          loops[*existingNode.gs] = curLoop
+          loops = append(loops, curLoop)
+          if DEBUG {
+            fmt.Printf("New loops: %+v\n", loops)
+          }
         }
       } else {
         // Add the parent/child pointers and recurse on the child
@@ -106,7 +110,8 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
         // append the latest node to our current path
         oldLen := len(curPath)
         nextPath := append(curPath, nextNode)
-        _, _, _, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, depth + 1, maxDepth)
+        _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, depth + 1, maxDepth)
+        loops = newLoops
         if err != nil {
           return nil, nil, nil, err
         }

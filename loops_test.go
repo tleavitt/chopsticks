@@ -9,10 +9,10 @@ func TestLoopsSimple(t *testing.T) {
   fmt.Println("starting TestSimpleLoops")
   gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
   gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
-  loops := map[gameState][]*playNode{
-    *initGame(): []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1)},
-    *initGame(): []*playNode{createPlayNodeCopyGs(gs2), createPlayNodeCopyGs(gs2)},
-    *initGame(): []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
+  loops := [][]*playNode{
+    []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1)},
+    []*playNode{createPlayNodeCopyGs(gs2), createPlayNodeCopyGs(gs2)},
+    []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
   } 
   distinctLoopGraphs := createDistinctLoopGraphs(loops) 
   for lg, _ := range distinctLoopGraphs {
@@ -43,6 +43,13 @@ func TestLoopsSimple(t *testing.T) {
 
 
 func assertParentChild(parent *loopNode, child *loopNode, t *testing.T) {
+  fmt.Println("assertParentChild")
+  if parent == nil {
+    t.Fatal("Parent is nil")
+  }
+  if child == nil {
+    t.Fatal("Child is nil")
+  }
   if !parent.nextNodes[child] {
     t.Fatalf("parent %+v does not contain child %+v", parent, child)
   }
@@ -52,43 +59,55 @@ func assertParentChild(parent *loopNode, child *loopNode, t *testing.T) {
 }
 
 func TestLoopsInterlinked(t *testing.T) {
-  fmt.Println("starting TestSimpleLoops")
+  fmt.Println("starting TestLoopsInterlinked")
   gs := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
   commonNode1 := createPlayNodeCopyGs(gs)
   commonNode2 := createPlayNodeCopyGs(gs)
 
-  ln11 := createPlayNodeCopyGs(gs)
-  ln12 := createPlayNodeCopyGs(gs)
-  ln14 := createPlayNodeCopyGs(gs)
+  pn11 := createPlayNodeCopyGs(gs)
+  pn12 := createPlayNodeCopyGs(gs)
+  pn14 := createPlayNodeCopyGs(gs)
 
-  ln22 := createPlayNodeCopyGs(gs)
-  ln23 := createPlayNodeCopyGs(gs)
+  pn22 := createPlayNodeCopyGs(gs)
+  pn23 := createPlayNodeCopyGs(gs)
 
-  ln31 := createPlayNodeCopyGs(gs)
-  ln33 := createPlayNodeCopyGs(gs)
-  ln34 := createPlayNodeCopyGs(gs)
+  pn31 := createPlayNodeCopyGs(gs)
+  pn33 := createPlayNodeCopyGs(gs)
+  pn34 := createPlayNodeCopyGs(gs)
 
-  loops := map[gameState][]*playNode{
-    *initGame(): []*playNode{ln11, ln12, commonNode1, ln14},
-    *initGame(): []*playNode{commonNode1, ln22, ln23, commonNode2},
-    *initGame(): []*playNode{ln31, commonNode2, ln33, ln34},
+  loops := [][]*playNode{
+    []*playNode{pn11, pn12, commonNode1, pn14},
+    []*playNode{commonNode1, pn22, pn23, commonNode2},
+    []*playNode{pn31, commonNode2, pn33, pn34},
   } 
+
+  fmt.Println(len(loops))
 
   distinctLoopGraphs := createDistinctLoopGraphs(loops) 
   if len(distinctLoopGraphs) != 1 {
     t.Fatal("Did not join distinct loops into one")
   }
 
+  for _, loop := range loops {
+    for _, curNode := range loop {
+      if curNode.ln == nil {
+        t.Fatalf("Loop node pointers not set correctly: %+v", curNode)
+      } else {
+        fmt.Printf("%+v\n", curNode.ln)
+      }
+    }
+  }
+
   // Common node 1
-  assertParentChild(ln12, commonNode1, t)
-  assertParentChild(commonNode1, ln14, t)
-  assertParentChild(commonNode2, commonNode1, t)
-  assertParentChild(commonNode1, ln22, t)
+  assertParentChild(pn12.ln, commonNode1.ln, t)
+  assertParentChild(commonNode1.ln, pn14.ln, t)
+  assertParentChild(commonNode2.ln, commonNode1.ln, t)
+  assertParentChild(commonNode1.ln, pn22.ln, t)
 
   // Common node 2
-  assertParentChild(ln23, commonNode2, t)
-  assertParentChild(ln31, commonNode2, t)
-  assertParentChild(commonNode2, ln33, t)
+  assertParentChild(pn23.ln, commonNode2.ln, t)
+  assertParentChild(pn31.ln, commonNode2.ln, t)
+  assertParentChild(commonNode2.ln, pn33.ln, t)
 
-  fmt.Println("finished TestSimpleLoops")
+  fmt.Println("finished TestLoopsInterlinked")
 }

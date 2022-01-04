@@ -1,6 +1,6 @@
 package main
 
-import ()
+import ("fmt")
 
 // Node for the loop metagraphs on top of the playNode graph
 type loopNode struct {
@@ -47,14 +47,16 @@ func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
     return
   }
   ln.lg = newLg
-  for nextLg, _ := range ln.nextNodes {
-    setNewLoopGraphForAll(nextLg, newLg)
+  for nextLn, _ := range ln.nextNodes {
+    setNewLoopGraphForAll(nextLn, newLg)
   } 
 }
 
-func createDistinctLoopGraphs(loops map[gameState][]*playNode) map[*loopGraph]bool {
+func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
+  fmt.Printf("CreateDistinctLoopGraphs: %+v\n", loops)
   loopGraphs := make(map[*loopGraph]bool, len(loops))
   for _, loop := range loops {
+    fmt.Printf("Cur loop: %+v\n", loop)
     var curLoopGraph = createEmptyLoopGraph() 
     var prevLoopNode *loopNode = nil
     loopGraphs[curLoopGraph] = true
@@ -67,8 +69,11 @@ func createDistinctLoopGraphs(loops map[gameState][]*playNode) map[*loopGraph]bo
         delete(loopGraphs, curLoopGraph)
         // Set all the loop graph nodes in the current loop to the new loop graph
         existingLoopGraph := pn.ln.lg
-        head := curLoopGraph.head
-        setNewLoopGraphForAll(head, existingLoopGraph)
+        // If the current loop graph has a head defined, update it and all it's children.
+        // The head could be undefined if this is the first time we're going through the update loop.
+        if head := curLoopGraph.head; head != nil {
+          setNewLoopGraphForAll(head, existingLoopGraph)
+        }
 
         // Update the curLoopGraph for future iterations
         curLoopGraph = existingLoopGraph
