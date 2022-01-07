@@ -117,7 +117,7 @@ func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
 func runComputerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
   // Computer move
   // Need to normalize the guiGs in order to map the best move onto the current GUI
-  normalizedComputerMove, _, err := curNode.getBestMoveAndScore(DEBUG)
+  normalizedComputerMove, _, err := curNode.getBestMoveAndScore(DEBUG, true) // TODO: don't allow unscored child?
   if err != nil {
     return curNode, err
   }

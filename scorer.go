@@ -3,23 +3,37 @@ package main
 import (
   "fmt"
   "errors"
-  "strings"
 )
 
-func chanToString(ch <-chan *playNode) string {
-  var sb strings.Builder
-  sb.WriteString("chan{\n")
-  for node := range ch {
-    sb.WriteString(node.toString())
-    sb.WriteString("\n")
-  }
-  sb.WriteString("}")
-  return sb.String()
+
+
+// func findMostWinningNodes(lg *loopGraph) (*loopNode, *loopNode, error) {
+//   var curNode *loopNode = lg.head
+//   var bestPlayer1Node *loopNode = nil
+//   var bestPlayer1Score float32 = -2 // Lower than all possible scores
+//   var bestPlayer2Node *loopNode = nil
+//   var bestPlayer2Score float32 = 2 // Higher than all possible scores
+
+//   visitedNodes := make(map[*loopNode]bool, 4)
+
+// }
+
+func scoreLoop(lg *loopGraph) {
+  // Invariant one: all edges of the loop should either be part of the same loop
+  // or not be part of a loop at all. 
+  // Invariant two: all exit nodes of the loop must be scored.
+  // Step one: find the most "winning" exit edges of the loop **for each player**.
+  //  -- winning means: best score for current player. Most winning states are +1/Player1Turn, -1/Player2Turn. If both
+  //     exist we have to score both
+  // Step two: score the most winning node(s) of the loop. The score is simply equal to the most winning edge.
+  // Step three: propagate the scores up **within the loop** from the most winning nodes. Repeat BFS until all nodes in the loop are scored.
+
 }
 
 
-func scoreAndEnqueueParents(node *playNode, frontier chan<- *playNode) error {
-  if err := node.updateScore(); err != nil {
+
+func scoreAndEnqueueParents(node *playNode, frontier *DumbQueue) error {
+  if err := node.updateScore(false); err != nil {
     return err
   }
   if DEBUG {
@@ -28,7 +42,7 @@ func scoreAndEnqueueParents(node *playNode, frontier chan<- *playNode) error {
   for _, parentNode := range node.prevNodes {
     // Safety belt: only enqueue nodes if they haven't been scored already
     if !parentNode.isScored {
-      frontier <- parentNode
+      frontier.enqueue(parentNode)
     }
   }
   return nil
@@ -36,14 +50,19 @@ func scoreAndEnqueueParents(node *playNode, frontier chan<- *playNode) error {
 
 // A loop can be scored iff all of it's dependencies have been scored.
 
+func playNodeToString(pi interface{}) string {
+  pn := pi.(*playNode)
+  return pn.toString()
+}
+
 // Here we have to use BFS 
 // Goal after this function returns: all nodes that are scoreable have scores.
 // NOTE: if the leaves map is incomplete this function will go into an infinite loop
 // Todo: loop detection? 
-func propagateScores(leaves map[gameState]*playNode, maxLoopCount int, frontierSize int) error {
+func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
   fmt.Println("Started propagateScores")
   // Queue of states to explore
-  frontier := make(chan *playNode, frontierSize) // Maximum int32, needed otherwise pushing a value will block....
+  frontier := createDumbQueue() // Values are *playNode
   // Score the leaves and add their immediate parents to the frontier
   for _, leaf := range leaves {
     // Safety belt:
@@ -55,37 +74,29 @@ func propagateScores(leaves map[gameState]*playNode, maxLoopCount int, frontierS
     }
   }
 
-  for loopCount, frontierHasValues := 0, true; frontierHasValues; loopCount++ {
+  // while
+  for loopCount := 0; frontier.size > 0; loopCount++ {
     if loopCount > maxLoopCount {
-      close(frontier)
-      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + chanToString(frontier))
+      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + frontier.toString(playNodeToString))
     }
-    // Ugh it's kind of ugly to use channels as queues here
-    select {
-    case curNode, ok := <-frontier:
-      if ok {
-        // If this node is already scored, skip this step. It's parents have already been enqueued in a previous iteration.
-        if curNode.isScored {
-          continue
-        }
-        // A node can be scored iff all it's children have been scored.
-        if curNode.allChildrenAreScored() {
-          if err := scoreAndEnqueueParents(curNode, frontier); err != nil {
-            return err
-          }
-        } else {
-          // Put it back on the pile, if the leaves are complete we'll get to all it's children eventually
-          // Important: frontier NEEDS to be FIFO otherwise we won't make progress.
-          frontier <- curNode
-        }
-      } else {
-        return errors.New("Frontier channel closed!")
+    curNodeI, err := frontier.dequeue()
+    if err != nil {
+      return err
+    }
+    curNode := curNodeI.(*playNode)
+    // If this node is already scored, skip this step. It's parents have already been enqueued in a previous iteration.
+    if curNode.isScored {
+      continue
+    }
+    // A node can be scored iff all it's children have been scored.
+    if curNode.allChildrenAreScored() {
+      if err := scoreAndEnqueueParents(curNode, frontier); err != nil {
+        return err
       }
-    default:
-      if DEBUG {
-        fmt.Println("Exhausted states to explore")
-      }
-      frontierHasValues = false
+    } else {
+      // Put it back on the pile, if the leaves are complete we'll get to all it's children eventually
+      // Important: frontier NEEDS to be FIFO otherwise we won't make progress.
+      frontier.enqueue(curNode)
     }
   }
   // At this point all nodes should be scored

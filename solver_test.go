@@ -98,7 +98,7 @@ func TestSolveBestMoves(t *testing.T) {
       fmt.Println("Hit leaf node, exiting")
       break;
     }
-    bestMove, _, err := curNode.getBestMoveAndScore(false)
+    bestMove, _, err := curNode.getBestMoveAndScore(false, false)
     if err != nil {
       t.Fatal(err.Error())
     }
@@ -297,7 +297,7 @@ func TestPropagateScores1(t *testing.T) {
   // Score
   leaves := make(map[gameState]*playNode, 1)
   leaves[*sonNode.gs] = sonNode
-  if err := propagateScores(leaves, 5, 5); err != nil {
+  if err := propagateScores(leaves, 5); err != nil {
     t.Fatal(err.Error())
   }
 
@@ -337,7 +337,7 @@ func TestPropagateScoresFork(t *testing.T) {
   leaves := make(map[gameState]*playNode, 1)
   leaves[*three.gs] = three
   // Should require exactly two nodes on the frontier (two and two prime)
-  if err := propagateScores(leaves, 5, 2); err != nil {
+  if err := propagateScores(leaves, 5); err != nil {
     t.Fatal(err.Error())
   }
 
@@ -384,7 +384,7 @@ func TestPropagateScoresLoop(t *testing.T) {
   leaves := make(map[gameState]*playNode, 1)
   leaves[*fourNode.gs] = fourNode
   // Should require exactly two nodes on the frontier (two and two prime)
-  if err := propagateScores(leaves, 7, 2); err != nil {
+  if err := propagateScores(leaves, 7); err != nil {
     t.Fatal(err.Error())
   }
 
