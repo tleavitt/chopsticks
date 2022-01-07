@@ -20,6 +20,7 @@ func dequeueHandleErr(dq *DumbQueue, t *testing.T) *Foo {
 }
 
 func TestDumbQueue(t *testing.T) {
+  fmt.Println("starting TestDumbQueue")
   foo1 := &Foo{"1", 1, nil,}
   foo2 := &Foo{"2", 2, foo1,}
   foo3 := &Foo{"3", 3, foo2,}
@@ -65,6 +66,7 @@ func TestDumbQueue(t *testing.T) {
   if err == nil {
     t.Fatalf("Expected err from dequeueing empty queue")
   }
+  fmt.Println("finishing TestDumbQueue")
 }
 
 func fooToString(fi interface{}) string {

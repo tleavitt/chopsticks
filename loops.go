@@ -70,7 +70,7 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
         // Set all the loop graph nodes in the current loop to the new loop graph
         existingLoopGraph := pn.ln.lg
         // If the current loop graph has a head defined, update it and all it's children.
-        // The head could be undefined if this is the first time we're going through the update loop.
+      // The head could be undefined if this is the first time we're going through the update loop.
         if head := curLoopGraph.head; head != nil {
           setNewLoopGraphForAll(head, existingLoopGraph)
         }

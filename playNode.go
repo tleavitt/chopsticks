@@ -85,21 +85,21 @@ func createPlayNodeReuseGs(gs *gameState) *playNode {
   return node
 }
 
+
 // Scores
 // Note: the node must not be a leaf (i.e. it must have children) or this function will fail
-func (node *playNode) getBestMoveAndScore(log bool, allowUnscoredChild bool) (move, float32, error) {
+func getBestMoveAndScore(childNodes map[move]*playNode, log bool, allowUnscoredChild bool) (move, float32, error) {
   // Our best move is the move that puts our opponent in the worst position.
   // The score of the current node is the negative of the score of our opponent in the node after our best move.
   var worstNextScoreForOpp float32 = 2 // This is an impossible score, so we should always trigger an update in the loop.
   var bestMoveForUs move // This should always get updated.
-  if log {
-    fmt.Printf("-- Running getBestMoveAndScore() for %+v\n", node.gs)
-  }
-  for nextMove, nextNode := range node.nextNodes {
+
+  for nextMove, nextNode := range childNodes {
+
     if !allowUnscoredChild && !nextNode.isScored {
       return bestMoveForUs, 0, errors.New(fmt.Sprintf("Child node is not scored: %s", nextNode.toString()))
     }
-oppScore := nextNode.scoreForCurrentPlayer() 
+    oppScore := nextNode.scoreForCurrentPlayer() 
     if log {
       fmt.Printf("-- Move: %+v, GS %+v, oppScore (for them): %f, worstNextScoreForOpp: %f, bestMoveForUs: %+v\n", nextMove, nextNode.gs, oppScore, worstNextScoreForOpp, bestMoveForUs)
     }
@@ -113,7 +113,7 @@ oppScore := nextNode.scoreForCurrentPlayer()
     }
   }
   if worstNextScoreForOpp > 1 || worstNextScoreForOpp < -1 {
-    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: play node is invalid: %+s; worst next score for opp: %f", node.toString(), worstNextScoreForOpp))
+    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: no best move found, worst next score for opp: %f", worstNextScoreForOpp))
   } else {
     // Note the negative sign!! worst score for opp is the best score for us.
     if log {
@@ -121,6 +121,13 @@ oppScore := nextNode.scoreForCurrentPlayer()
     }
     return bestMoveForUs, -worstNextScoreForOpp, nil
   }
+}
+
+func (node *playNode) getBestMoveAndScore(log bool, allowUnscoredChild bool) (move, float32, error) {
+  if log {
+    fmt.Printf("-- Running getBestMoveAndScore() for %+v\n", node.gs)
+  }
+  return getBestMoveAndScore(node.nextNodes, log, allowUnscoredChild)
 }
 
 

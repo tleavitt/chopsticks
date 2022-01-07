@@ -5,18 +5,111 @@ import (
   "errors"
 )
 
+type bestNode struct {
+  score float32
+  node *loopNode
+}
 
+func initBestNode() *bestNode {
+  return &bestNode{-2, nil}  // Lower than all possible scores
+}
 
-// func findMostWinningNodes(lg *loopGraph) (*loopNode, *loopNode, error) {
-//   var curNode *loopNode = lg.head
-//   var bestPlayer1Node *loopNode = nil
-//   var bestPlayer1Score float32 = -2 // Lower than all possible scores
-//   var bestPlayer2Node *loopNode = nil
-//   var bestPlayer2Score float32 = 2 // Higher than all possible scores
+func (bn *bestNode) update(score float32, ln *loopNode) {
+  if bn.score < score {
+    bn.score = score
+    bn.node = ln
+  }
+}
 
-//   visitedNodes := make(map[*loopNode]bool, 4)
+func loopNodeToString(li interface{}) string {
+  ln := li.(*loopNode)
+  return fmt.Sprintf("%+v", ln)
+}
 
-// }
+// Type safe enqueue/dequeue
+func enqueueLoopNode(dq *DumbQueue, ln *loopNode) {
+  dq.enqueue(ln)
+}
+
+func dequeueLoopNode(dq *DumbQueue) (*loopNode, error) {
+  ln, err := dq.dequeue()
+  if err != nil {
+    return nil, err
+  }
+  return ln.(*loopNode), nil
+}
+
+// Given a loop graph, find the "most winning" node for each player in that loop.
+// All exit nodes of the graph must be scored
+func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
+  bestPlayer1 := initBestNode()
+  bestPlayer2 := initBestNode()
+
+  visitedNodes := make(map[*loopNode]bool, 4)
+  // Do BFS over the loop graph
+  frontier := createDumbQueue() // Values are *loopNode
+  enqueueLoopNode(frontier, lg.head)
+
+  for loopCount := 0; frontier.size > 0; loopCount++ {
+    if loopCount > 10000 {
+      return nil, nil, errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + frontier.toString(playNodeToString))
+    }
+    curNode, err := dequeueLoopNode(frontier)
+    if err != nil {
+      return nil, nil, err
+    }
+
+    // We've been here before, abort
+    if visitedNodes[curNode] {
+      continue
+    }
+    visitedNodes[curNode] = true
+
+    // Invariant: the current node should be part of the loop graph:
+    if curNode.lg != lg {
+      return nil, nil, errors.New(fmt.Sprintf("Node in loop graph does not point to lg: %+v, lg: %p", curNode, lg))
+    }
+
+    // Score all loop exit nodes leaving from this node
+    nodesToScore := make(map[move]*playNode, len(curNode.pn.nextNodes))
+    for m, nextPn := range curNode.pn.nextNodes {
+      // Invariant: all out edges of the nodes should either be part of the same loop
+      // or not be part of a loop at all.
+      if nextPn.ln != nil {
+        if nextPn.ln.lg != lg {
+          return nil, nil, errors.New(fmt.Sprintf("Next play node in loop graph is part of a different loop graph: %+v, current lg: %p, new lg %p", nextPn, lg, nextPn.ln.lg))
+        }
+      } else {
+        // Else this is an exit node, evaluate its score
+        nodesToScore[m] = nextPn
+      }
+    }
+
+    // If there are exit nodes: update the best move score. Otherwise just keep chugging along, we don't want to update
+    // the scores to zeros or some other value
+    if len(nodesToScore) > 0 {
+      _, curScore, err := getBestMoveAndScore(nodesToScore, false, false)
+      if err != nil {
+        return nil, nil, err
+      }
+
+      if curNode.pn.gs.turn == Player1 {
+        bestPlayer1.update(curScore, curNode)
+      } else {
+        bestPlayer2.update(curScore, curNode)
+      }
+    }
+
+    // Move on to the next nodes in the loop graph
+    for nextNode, _ := range curNode.nextNodes {
+      enqueueLoopNode(frontier, nextNode)
+    }
+  }
+  // Note: at this point we may or may not have update the best scores for each player - if there are no
+  // exit nodes on a particular player's turn it will not have a best score.
+  // If we haven't updated, the bestScore nodes will have a score of -2 and a bestNode of nil
+  return bestPlayer1, bestPlayer2, nil
+}
 
 func scoreLoop(lg *loopGraph) {
   // Invariant one: all edges of the loop should either be part of the same loop
