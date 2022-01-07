@@ -33,21 +33,24 @@ func TestMostWinningNodesSimple(t *testing.T) {
 }
 
 func TestMostWinningNodesInterlinked(t *testing.T) {
-  fmt.Println("starting TestLoopsInterlinked")
-  gs := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
-  commonNode1 := createPlayNodeCopyGs(gs)
-  commonNode2 := createPlayNodeCopyGs(gs)
+  fmt.Println("starting TestMostWinningNodesInterlinked")
+  gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
+  gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
 
-  pn11 := createPlayNodeCopyGs(gs)
-  pn12 := createPlayNodeCopyGs(gs)
-  pn14 := createPlayNodeCopyGs(gs)
+  // Odd numbers are player1's turn, even numbers are player 2's turn
+  commonNode1 := createPlayNodeCopyGs(gs1) // 1
+  commonNode2 := createPlayNodeCopyGs(gs2) // 2
 
-  pn22 := createPlayNodeCopyGs(gs)
-  pn23 := createPlayNodeCopyGs(gs)
+  pn11 := createPlayNodeCopyGs(gs1) // 1
+  pn12 := createPlayNodeCopyGs(gs2) // 2
+  pn14 := createPlayNodeCopyGs(gs2) // 2
 
-  pn31 := createPlayNodeCopyGs(gs)
-  pn33 := createPlayNodeCopyGs(gs)
-  pn34 := createPlayNodeCopyGs(gs)
+  pn22 := createPlayNodeCopyGs(gs2) // 2
+  pn23 := createPlayNodeCopyGs(gs1) // 1
+
+  pn31 := createPlayNodeCopyGs(gs1) // 1
+  pn33 := createPlayNodeCopyGs(gs1) // 1
+  pn34 := createPlayNodeCopyGs(gs2) // 2
 
   loops := [][]*playNode{
     []*playNode{pn11, pn12, commonNode1, pn14},
@@ -55,33 +58,63 @@ func TestMostWinningNodesInterlinked(t *testing.T) {
     []*playNode{pn31, commonNode2, pn33, pn34},
   } 
 
-  fmt.Println(len(loops))
+  // ExitNode 1: player1 wins
+  exitNode1 := createPlayNodeReuseGs(&gameState{
+    player{0, 2,}, player{0, 0,}, Player2,})
+  exitNode1.score = 1
+  exitNode1.isScored = true
+
+  // ExitNode 2: player2 will win 
+  exitNode2 := createPlayNodeReuseGs(&gameState{
+    player{0, 2,}, player{2, 2,}, Player1,})
+  exitNode2.score = -1
+  exitNode2.isScored = true
+
+  // Exit Node 3: player1 will win
+  exitNode3 := createPlayNodeReuseGs(&gameState{
+    player{0, 1,}, player{0, 1,}, Player1,})
+  exitNode3.score = 1
+  exitNode3.isScored = true
+
+  // ExitNode 4: dead even
+  exitNode4 := createPlayNodeReuseGs(&gameState{
+    player{1, 1,}, player{1, 1,}, Player2,})
+  exitNode4.score = 0
+  exitNode4.isScored = true
+
+  m := move{Left, Left} // The specific move doesn't matter, just the edges
+
+  // One winning exit node for 23
+  pn23.nextNodes[m] = exitNode1
+
+  // One winning and one losing exit node for 34
+  pn34.nextNodes[m] = exitNode2 //
+  pn34.nextNodes[move{Left, Right}] = exitNode3 //
+
+  // One neutral exit node for common1
+  commonNode1.nextNodes[m] = exitNode4
 
   distinctLoopGraphs := createDistinctLoopGraphs(loops) 
   if len(distinctLoopGraphs) != 1 {
     t.Fatal("Did not join distinct loops into one")
   }
 
-  for _, loop := range loops {
-    for _, curNode := range loop {
-      if curNode.ln == nil {
-        t.Fatalf("Loop node pointers not set correctly: %+v", curNode)
-      } else {
-        fmt.Printf("%+v\n", curNode.ln)
-      }
+  for lg, _ := range distinctLoopGraphs {
+    b1, b2, err := findMostWinningNodes(lg)
+    if err != nil {
+      t.Fatal(err.Error())
+    }
+    fmt.Printf("Most winning nodes: %+v, %+v", b1, b2)
+    // Best player1 score should be p23
+    if b1.score != 1 && b1.node.pn != pn23 {
+      t.Fatalf("Unexpected winning node for player1: %+v, playNode %+v", b1, b1.node.pn)
+    }
+
+    // Best player2 score should be p34
+    if b2.score != 1 && b2.node.pn != pn34 {
+      t.Fatalf("Unexpected winning node for player2: %+v, playNode %+v", b1, b1.node.pn)
     }
   }
 
-  // Common node 1
-  assertParentChild(pn12.ln, commonNode1.ln, t)
-  assertParentChild(commonNode1.ln, pn14.ln, t)
-  assertParentChild(commonNode2.ln, commonNode1.ln, t)
-  assertParentChild(commonNode1.ln, pn22.ln, t)
-
-  // Common node 2
-  assertParentChild(pn23.ln, commonNode2.ln, t)
-  assertParentChild(pn31.ln, commonNode2.ln, t)
-  assertParentChild(commonNode2.ln, pn33.ln, t)
-
-  fmt.Println("finished TestLoopsInterlinked")
+  fmt.Println("finished TestMostWinningNodesInterlinked")
 }
