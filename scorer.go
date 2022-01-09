@@ -81,7 +81,7 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
     for m, nextPn := range curNode.pn.nextNodes {
       // Invariant: all out edges of the nodes should either be part of the same loop
       // or scored. Note: the next edge could be  part of a different loop; if that's the case it must be scored.
-      if nextPn.ln == nil || nextPn.ln.lg != lg {
+      if isExitNode(nextPn, lg) {
         // If we're here, next node is either not in a loop or in a different loop. In both cases it is an exit node 
         // and must be scored.
         if !nextPn.isScored {

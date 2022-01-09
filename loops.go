@@ -15,6 +15,12 @@ type loopGraph struct {
   head *loopNode
 };
 
+// Returns true if the given play node is an exit node of the given loop graph.
+// Exit nodes are either not part of a loop or part of a different loop graph.
+func isExitNode(pn *playNode, lg *loopGraph) {
+  return pn.ln == nil || pn.ln.lg != lg
+}
+
 // Generics would be nice here...
 func addForwardBackwardEdges(parent *loopNode, child *loopNode) {
   addForwardEdge(parent, child)
@@ -52,8 +58,7 @@ func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
   } 
 }
 
-// Creates a map from loop graphs to whether or not those loop graphs have been scored
-// By default all entries initialize to false.
+// Create a set of loop graphs for the given loops.
 func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   fmt.Printf("CreateDistinctLoopGraphs: %+v\n", loops)
   loopGraphs := make(map[*loopGraph]bool, len(loops))
@@ -62,8 +67,7 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
     var curLoopGraph = createEmptyLoopGraph() 
     var prevLoopNode *loopNode = nil
 
-    // False means: this loop graph has not been scored.
-    loopGraphs[curLoopGraph] = false
+    loopGraphs[curLoopGraph] = true // Values are always true.
 
     for it, pn := range loop {
       var curLoopNode *loopNode
@@ -103,6 +107,34 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   }
 
   return loopGraphs
+}
+
+// Get the exit nodes of the loop graph. Exit nodes are children of loop members that
+// are not themselves in the same loop. (They could be in a different loop or be normal nodes.)
+func getExitNodes(lg *loopGraph) map[*playNode]bool {
+  exitNodes := make(map[*playNode]bool)
+  getExitNodesImpl(lg.head, make(map[*loopNode]bool), exitNodes)
+  return exitNodes
+}
+
+func getExitNodesImpl(ln *loopNode, visitedNodes map[*loopNode]bool, exitNodes map[*playNode]bool) {
+  // Base case: we've already been here.
+  if visitedNodes[ln] {
+    return 
+  }  
+  visitedNodes[ln] = true
+  pn := ln.pn
+  for _, nextPn := range pn.nextNodes {
+    if isExitNode(nextPn, ln.lg) {
+      // Found an exit node, add it to our set
+      exitNodes[nextPn] = true
+    }
+  }
+
+  // DFS on the loop graph
+  for nextLn, _ := range ln.nextNodes {
+    getExitNodesImpl(ln, visitedNodes, exitNodes)
+  }
 }
 
 
