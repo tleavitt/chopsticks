@@ -47,6 +47,7 @@ func dequeueLoopNode(dq *DumbQueue) (*loopNode, error) {
 
 // Given a loop graph, find the "most winning" node for each player in that loop.
 // All exit nodes of the graph must be scored
+// TODO: could also implement by looping over the exit nodes instead?
 func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
   bestPlayer1 := initBestNode()
   bestPlayer2 := initBestNode()
@@ -169,7 +170,7 @@ func scoreLoop(lg *loopGraph) error {
     // If all children are scored, we can score this node. If NOT all children are scored, there's another branch of the loop we have to climb up
     // OR this is an infinite loop, so don't enqueue parents.
     if curPlayNode.allChildrenAreScored() {
-      if err := curPlayNode.updateScore(false); err != nil {
+      if err := curPlayNode.updateScore(); err != nil {
         return err
       }
       if DEBUG {
@@ -181,7 +182,8 @@ func scoreLoop(lg *loopGraph) error {
   // Step four: go over the loop one last time and give all unscored nodes a heuristic score - they're stuck in an
   // infinite loop
   scoreInfiniteLoops(ln)
-  // At this point, all nodes in the loop should be scored. Return
+  // At this point, all nodes in the loop should be scored. Mark the loop as such.
+  lg.isScored = true
 }
 
 func scoreInfiniteLoops(lg *loopGraph) {
@@ -206,28 +208,46 @@ func scoreInfiniteLoopsImpl(ln *loopNode, visiteNodes map[*loopNode]bool) {
 
   // Continue DFS
   for childNode, _ := range ln.nextNodes {
-    scoreInfiniteLoopsImpl(childNOde, visitedNodes)
+    scoreInfiniteLoopsImpl(childNode, visitedNodes)
   }
 }
 
+func isScorable(node *playNode) bool {
+  return !parentNode.isScored && parentNode.allChildrenAreScored()
+}
 
-func scoreAndEnqueueParents(node *playNode, frontier *DumbQueue) error {
-  if err := node.updateScore(false); err != nil {
-    return err
-  }
-  if DEBUG {
-    fmt.Println("Computed score for node: " + node.toString())
-  }
+func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) {
+  // Assume node has been scored; 
+  // enqueue all parents of node that are now scorable (i.e. they are not scored but all their children are scored)
   for _, parentNode := range node.prevNodes {
-    // Safety belt: only enqueue nodes if they haven't been scored already
-    if !parentNode.isScored {
-      enqueuePlayNode(frontier, parentNode)
+    if isScorable(node) {
+      enqueuePlayNode(scorableFrontier, parentNode)
     }
   }
-  return nil
 }
 
-// A loop can be scored iff all of it's dependencies have been scored.
+func enqueueAllScorableParents(lg *loopGraph, scorableFrontier *DumbQueue) error {
+  return enqueueAllScorableParentsImpl(lg.head, scorableFrontier, make(map[*loopNode]bool))
+}
+
+func enqueueAllScorableParentsImpl(ln *loopNode, scorableFrontier *DumbQueue, visitedNodes map[*loopNode]bool) error {
+  // Base case: already been here
+  if visitedNodes[ln] {
+    return nil 
+  }
+  visitedNodes[ln] = true
+  pn := ln.pn
+  // Invariant: all loop nodes should be scored.
+  if !pn.isScored {
+    return errors.New(fmr.Sprintf("Loop node is not scored: %+v", ln))
+  }
+  // Enqueue scorable parents
+  enqueueScorableParents(scorableFrontier, pn)
+  // Recurse
+  for childNode, _ := range ln.nextNodes {
+    enqueueAllScorableParentsImpl(childNode, scorableFrontier, visitedNodes)
+  }
+}
 
 func playNodeToString(pi interface{}) string {
   pn := pi.(*playNode)
@@ -247,49 +267,123 @@ func dequeuePlayNode(dq *DumbQueue) (*playNode, error) {
   return pn.(*playNode), nil
 }
 
-// Here we have to use BFS 
-// Goal after this function returns: all nodes that are scoreable have scores.
-// NOTE: if the leaves map is incomplete this function will go into an infinite loop
-// Todo: loop detection? 
-func propagateScores(leaves map[gameState]*playNode) error {
-  fmt.Println("Started propagateScores")
-  // Queue of states to explore
-  frontier := createDumbQueue() // Values are *playNode
-  // Score the leaves and add their immediate parents to the frontier
+// Scored frontier vs Scorable frontier:
+// scored frontier consist of nodes that are likley to be able to be scored (but not a guarantee...) ???
+// Scored frontier: nodes that have been scored? why do we need these? we don't
+// Idea: loop over the scorable frontier until it's empty. At that point, we've scored all the nodes that we can without
+// processing loops. Therefore there should be some loops that have all exit nodes scored. Score those exit nodes, then
+// put the parents of the loop onto the scorable frontier, and repeat.
+func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGraph]map[*playNode]bool, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
+  // Drain the scorable frontier
+  for loopCount := 0; scorableFrontier.size > 0; loopCount++ {
+    if loopCount > 10000 {
+      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + scorableFrontier.toString(playNodeToString))
+    }
+    curNode, err := dequeuePlayNode(scorableFrontier)
+    if err != nil {
+      return err
+    }
+    // Nodes on the scorable frontier must be scorable.
+    if !isScorable(curNode) {
+      return errors.New(fmt.Sprintf("Node on frontier is not scorable: %s", curNode.toString()))
+    }
+
+    // Score the node
+    if err := curNode.updateScore(); err != nil {
+      return err
+    }
+
+    // Check if this is an exit node, and update the remainingExitNodes map if so.
+    if lgs, ok := exitNodesToLoopGraph[curNode]; ok {
+      for _, lg := range lgs {
+        // Sanity checks 
+        exitNodes, okR := remainingExitNodes[lg]
+        if !okR {
+          return errors.New(fmt.Sprintf("Loop graph is not present in remaining exit nodes map: %+v, %+v", loopGraph, remainingExitNodes)))
+        } 
+        if _, okE := exitNodes[curNode]; !okE {
+          return errors.New(fmt.Sprintf("Exit nodes does not contain play node: %+v, %+v", curNode, exitNodes)))
+        }
+
+        delete(exitNodes, curNode)
+      }
+    }
+
+    enqueueScorableParents(scorableFrontier, curNode) 
+  }
+  // Sanity check: we should have drained the scorable frontier now.
+  if !scorableFrontier.isEmpty() {
+    return errors.New(fmt.Sprintf("Scorable frontier is not empty after score propagation: %s", scorableFrontier.toString(playNodeToString)))
+  }
+  return nil
+}
+
+createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]bool) map[*loopGraph]bool {
+  unscoredLoopGraphs := make(map[*loopGraph]bool, len(loopGraphs))
+  for lg, _ := range loopGraphs {
+    unscoredLoopGraphs[lg] = true
+  }
+  return unscoredLoopGraphs
+}
+
+func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bool) error {
+  // Compute the exit nodes; this map maintains all unscored exit nodes of a loop
+  loopsToExitNodes := getExitAllExitNodes(loopGraphs)
+  unscoredLoopGraphs := createUnscoredLoopGraphMap(loopGraphs)
+  // Need the inverse map too:
+  exitNodesToLoopGraph := invertExitNodesMap(loopsToExitNodes) 
+  // Keep a running set of nodes that can (definitely?) be scored(?)
+  scorableFrontier := createDumbQueue() // Values are *playNode
+
+  // First, score the leaves and enqueue scorable nodes onto the scorable frontier. 
   for _, leaf := range leaves {
     // Safety belt:
     if len(leaf.nextNodes) != 0 {
       return errors.New("Not a leaf: " + leaf.toString()) 
     }
-    if err := scoreAndEnqueueParents(leaf, frontier); err != nil {
+    if err := leaf.updateScore(); err != nil {
       return err
     }
+    enqueueScorableParents(scorableFrontier, leaf)
   }
 
-  // while
-  for loopCount := 0; frontier.size > 0; loopCount++ {
+  // Scoring iteration: consists of two steps.
+  // Step 1: for all loops that have no unscored exit nodes, compute their scores and enqueue their scorable parents.
+  // Step 2: propagate scores from the scorable frontier until the frontier is empty.
+  // Repeat this until all nodes are scored
+
+  // We're done if the scorable frontier is empty and all loops have been scored, so we're not done if either 
+  // there are nodes on the frontier, or there are unscored loop graphs
+  for loopCount := 0; !scorableFrontier.isEmpty() || len(unscoredLoopGraphs) > 0; loopCount++ {
     if loopCount > 10000 {
-      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + frontier.toString(playNodeToString))
+      return errors.New("maxLoopCount exceeded in scoring iteration, frontier: %s" + scorableFrontier.toString(playNodeToString))
     }
-    curNode, err := dequeuePlayNode(frontier)
-    if err != nil {
+
+    // Find all loops with no unscored exit nodes, and score them.
+    curScoredLoopGraphs = []*loopGraph{}
+    for lg, _ := range unscoredLoopGraphs {
+      exitNodes := loopsToExitNodes[lg]
+      if len(exitNodes) == 0 {
+        if err := scoreLoop(lg); err != nil {
+          return err
+        }
+        // now: lg.isScored == true
+        if err := enqueueAllScorableParents(lg); err != nil {
+          return err
+        }
+        // Record that we scored this graph
+        curScoredLoopGraphs = append(curScoredLoopGraphs, lg)
+      }
+    }
+
+    // Update our unscoredLoopGraphs map.
+    for _, lg := range curScoredLoopGraphs {
+      delete(unscoredLoopGraphs, lg)
+    }
+
+    // Propagate the scores
+    if err := propagateScores(scorableFrontier, loopsToExitNodes); err != nil {
       return err
     }
-    // If this node is already scored, skip this step. It's parents have already been enqueued in a previous iteration.
-    if curNode.isScored {
-      continue
-    }
-    // A node can be scored iff all it's children have been scored.
-    if curNode.allChildrenAreScored() {
-      if err := scoreAndEnqueueParents(curNode, frontier); err != nil {
-        return err
-      }
-    } else {
-      // Put it back on the pile, if the leaves are complete we'll get to all it's children eventually
-      // Important: frontier NEEDS to be FIFO otherwise we won't make progress.
-      enqueuePlayNode(frontier, curNode)
-    }
   }
-  // At this point all nodes should be scored
-  return nil
 }

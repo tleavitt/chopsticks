@@ -10,7 +10,7 @@ type loopNode struct {
   prevNodes map[*loopNode]bool // The previous node (or nodes) in this loop graph. For simple loops this has just one element.
 }
 
-// Loop graphs are simply a pointer to the head loop node.
+// Loop graphs are simply a pointer to the head loop node
 type loopGraph struct {
   head *loopNode
 };
@@ -44,7 +44,7 @@ func createAndSetupLoopNode(pn *playNode, lg *loopGraph) *loopNode {
 }
 
 func createEmptyLoopGraph() *loopGraph {
-  return &loopGraph{nil,}
+  return &loopGraph{nil,false,}
 }
 
 func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
@@ -107,6 +107,36 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   }
 
   return loopGraphs
+}
+
+// Transforms a set of loop graphs into a map from loop graphs to their exit nodes
+func getExitAllExitNodes(loopGraphs map[*loopGraph]bool) map[*loopGraph]map[*playNode]bool {
+  graphsToExitNodes := make(map[*loopGraph]map[*playNode]bool, len(loopGraphs)
+  for lg, _ := range loopGraphs {
+    graphsToExitNodes[lg] = getExitNodes(lg)
+  }
+  return graphsToExitNodes
+}
+
+func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[*playNode][]*loopGraph {
+  exitNodesToLoopGraph = make(map[*playNode][]*loopGraph, len(loopsToExitNodes)) // underestimates size
+  for lg, exitNodes := range loopsToExitNodes {
+    for exitNode, _ := range exitNodes {
+      var curLoops []*loopGraph
+      existingLoops, ok := exitNodesToLoopGraph[exitNode]
+      if ok {
+        // TODO: how common is it to have multiple loop graphs for the same exit node?
+        if DEBUG {
+          fmt.Printf("Found exit node for %d loop graphs\n", len(existingLoops) + 1)
+        }
+        curLoops = append(existingLoops, lg)
+      } else {
+        curLoops = []*loopGraph{lg}
+      }
+      exitNodesToLoopGraph[exitNode] = curLoops
+    }
+  }
+  return exitNodesToLoopGraph
 }
 
 // Get the exit nodes of the loop graph. Exit nodes are children of loop members that

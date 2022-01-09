@@ -5,16 +5,13 @@ import (
   "fmt"
   "strings"
 )
+// Dumb FIFO queue, because channels kind of suck for this.
 
-
-
-// I wonder if using interface{} would also be ok?
 type DumbQueueNode struct {
     value interface{}
     next *DumbQueueNode
 }
 
-// Dumb FIFO queue, because channels kind of suck for this.
 type DumbQueue struct {
   head *DumbQueueNode
   tail *DumbQueueNode
