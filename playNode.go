@@ -85,7 +85,6 @@ func createPlayNodeReuseGs(gs *gameState) *playNode {
   return node
 }
 
-
 // Scores
 // Note: the node must not be a leaf (i.e. it must have children) or this function will fail
 func getBestMoveAndScore(childNodes map[move]*playNode, log bool, allowUnscoredChild bool) (move, float32, error) {

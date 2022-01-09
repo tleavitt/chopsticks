@@ -52,6 +52,8 @@ func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
   } 
 }
 
+// Creates a map from loop graphs to whether or not those loop graphs have been scored
+// By default all entries initialize to false.
 func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   fmt.Printf("CreateDistinctLoopGraphs: %+v\n", loops)
   loopGraphs := make(map[*loopGraph]bool, len(loops))
@@ -59,7 +61,9 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
     fmt.Printf("Cur loop: %+v\n", loop)
     var curLoopGraph = createEmptyLoopGraph() 
     var prevLoopNode *loopNode = nil
-    loopGraphs[curLoopGraph] = true
+
+    // False means: this loop graph has not been scored.
+    loopGraphs[curLoopGraph] = false
 
     for it, pn := range loop {
       var curLoopNode *loopNode

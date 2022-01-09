@@ -21,6 +21,12 @@ func (bn *bestNode) update(score float32, ln *loopNode) {
   }
 }
 
+func applyScore(bn *bestNode) {
+  pn := bn.node.pn
+  pn.score = turnToSign(pn.gs.turn) * bn.score
+  pn.isScored = true
+}
+
 func loopNodeToString(li interface{}) string {
   ln := li.(*loopNode)
   return fmt.Sprintf("%+v", ln)
@@ -52,7 +58,7 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
 
   for loopCount := 0; frontier.size > 0; loopCount++ {
     if loopCount > 10000 {
-      return nil, nil, errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + frontier.toString(playNodeToString))
+      return nil, nil, errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + frontier.toString(loopNodeToString))
     }
     curNode, err := dequeueLoopNode(frontier)
     if err != nil {
@@ -74,13 +80,13 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
     nodesToScore := make(map[move]*playNode, len(curNode.pn.nextNodes))
     for m, nextPn := range curNode.pn.nextNodes {
       // Invariant: all out edges of the nodes should either be part of the same loop
-      // or not be part of a loop at all.
-      if nextPn.ln != nil {
-        if nextPn.ln.lg != lg {
-          return nil, nil, errors.New(fmt.Sprintf("Next play node in loop graph is part of a different loop graph: %+v, current lg: %p, new lg %p", nextPn, lg, nextPn.ln.lg))
+      // or scored. Note: the next edge could be  part of a different loop; if that's the case it must be scored.
+      if nextPn.ln == nil || nextPn.ln.lg != lg {
+        // If we're here, next node is either not in a loop or in a different loop. In both cases it is an exit node 
+        // and must be scored.
+        if !nextPn.isScored {
+          return nil, nil, errors.New(fmt.Sprintf("Exit node of loop is not scored: %+v, current ln: %+v", nextPn, curNode))
         }
-      } else {
-        // Else this is an exit node, evaluate its score
         nodesToScore[m] = nextPn
       }
     }
@@ -111,18 +117,98 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
   return bestPlayer1, bestPlayer2, nil
 }
 
-func scoreLoop(lg *loopGraph) {
-  // Invariant one: all edges of the loop should either be part of the same loop
-  // or not be part of a loop at all. 
-  // Invariant two: all exit nodes of the loop must be scored.
+func enqueueLoopParents(dq *DumbQueue, ln *loopNode) {
+  for parentNode, _ := range ln.prevNodes {
+    enqueueLoopNode(dq, parentNode)
+  }
+}
+
+func scoreLoop(lg *loopGraph) error {
   // Step one: find the most "winning" exit edges of the loop **for each player**.
   //  -- winning means: best score for current player. Most winning states are +1/Player1Turn, -1/Player2Turn. If both
   //     exist we have to score both
+  b1, b2, err := findMostWinningNodes(lg)
+  if err != nil {
+    return err
+  }
   // Step two: score the most winning node(s) of the loop. The score is simply equal to the most winning edge.
-  // Step three: propagate the scores up **within the loop** from the most winning nodes. Repeat BFS until all nodes in the loop are scored.
-
+  // Add the loop-parents of the most winning nodes to 
+  nodesToScore := createDumbQueue() // Values are *loopNode
+  if b1.node != nil {
+    if DEBUG {
+      fmt.Printf("Most winnign node for p1: %+v (%f)", b1.node, b1.score)
+    }
+    applyScore(b1) 
+    enqueueLoopParents(nodesToScore, b1.node)
+  }
+  if b2.node != nil {
+    if DEBUG {
+      fmt.Printf("Most winnign node for p2: %+v (%f)", b2.node, b2.score)
+    }
+    applyScore(b2) 
+    enqueueLoopParents(nodesToScore, b2.node)
+  }
+  // Step three: propagate the scores up **within the loop** from the most winning nodes. 
+  // Repeat BFS until all nodes in the loop are scored, OR until we run out of ways to propagate up the loop.
+  for loopCount := 0; nodesToScore.size > 0; loopCount++ {
+    if loopCount > 10000 {
+      return nil, nil, errors.New("maxLoopCount exceeded, possible error in BFS graph. nodesToScore: %s" + nodesToScore.toString(loopNodeToString))
+    }
+    curLoopNode, err := dequeueLoopNode(nodesToScore)
+    if err != nil {
+      return err
+    }
+    curPlayNode := curLoopNode.pn
+    // If node is already scored, we've already processed it, so skip.
+    if curPlayNode.isScored {
+      if DEBUG {
+        fmt.Printf("Loop node is already scored, skipping: %s", curPlayNode.toString())
+      }
+      continue
+    }
+    // If all children are scored, we can score this node. If NOT all children are scored, there's another branch of the loop we have to climb up
+    // OR this is an infinite loop, so don't enqueue parents.
+    if curPlayNode.allChildrenAreScored() {
+      if err := curPlayNode.updateScore(false); err != nil {
+        return err
+      }
+      if DEBUG {
+        fmt.Printf("Scored loop node: %s", curPlayNode.toString())
+      }
+      enqueueLoopParents(nodesToScore, curLoopNode)
+    }
+  }
+  // Step four: go over the loop one last time and give all unscored nodes a heuristic score - they're stuck in an
+  // infinite loop
+  scoreInfiniteLoops(ln)
+  // At this point, all nodes in the loop should be scored. Return
 }
 
+func scoreInfiniteLoops(lg *loopGraph) {
+  scoreInfiniteLoopsImpl(lg.head, make(map[*loopNode]bool))
+}
+
+func scoreInfiniteLoopsImpl(ln *loopNode, visiteNodes map[*loopNode]bool) {
+  // Base case: already been here
+  if visitedNodes[ln] {
+    return
+  }
+  visitedNodes[ln] = true
+  pn := ln.pn
+  // If no score, this is an infinite loop, so apply the heuristic score
+  if !pn.isScored {
+    pn.score = pn.getHeuristicScore()
+    pn.isScored = true
+    if DEBUG {
+      fmt.Printf("Applied heuristic score to unscored loop node: %+v (%s)", ln, ln.pn.toString())
+    }
+  }
+
+  // Continue DFS
+  for childNode, _ := range ln.nextNodes {
+    scoreInfiniteLoopsImpl(childNOde, visitedNodes)
+  }
+}
 
 
 func scoreAndEnqueueParents(node *playNode, frontier *DumbQueue) error {
@@ -135,7 +221,7 @@ func scoreAndEnqueueParents(node *playNode, frontier *DumbQueue) error {
   for _, parentNode := range node.prevNodes {
     // Safety belt: only enqueue nodes if they haven't been scored already
     if !parentNode.isScored {
-      frontier.enqueue(parentNode)
+      enqueuePlayNode(frontier, parentNode)
     }
   }
   return nil
@@ -148,11 +234,24 @@ func playNodeToString(pi interface{}) string {
   return pn.toString()
 }
 
+// Type safe enqueue/dequeue
+func enqueuePlayNode(dq *DumbQueue, ln *playNode) {
+  dq.enqueue(ln)
+}
+
+func dequeuePlayNode(dq *DumbQueue) (*playNode, error) {
+  pn, err := dq.dequeue()
+  if err != nil {
+    return nil, err
+  }
+  return pn.(*playNode), nil
+}
+
 // Here we have to use BFS 
 // Goal after this function returns: all nodes that are scoreable have scores.
 // NOTE: if the leaves map is incomplete this function will go into an infinite loop
 // Todo: loop detection? 
-func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
+func propagateScores(leaves map[gameState]*playNode) error {
   fmt.Println("Started propagateScores")
   // Queue of states to explore
   frontier := createDumbQueue() // Values are *playNode
@@ -169,14 +268,13 @@ func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
 
   // while
   for loopCount := 0; frontier.size > 0; loopCount++ {
-    if loopCount > maxLoopCount {
+    if loopCount > 10000 {
       return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + frontier.toString(playNodeToString))
     }
-    curNodeI, err := frontier.dequeue()
+    curNode, err := dequeuePlayNode(frontier)
     if err != nil {
       return err
     }
-    curNode := curNodeI.(*playNode)
     // If this node is already scored, skip this step. It's parents have already been enqueued in a previous iteration.
     if curNode.isScored {
       continue
@@ -189,7 +287,7 @@ func propagateScores(leaves map[gameState]*playNode, maxLoopCount int) error {
     } else {
       // Put it back on the pile, if the leaves are complete we'll get to all it's children eventually
       // Important: frontier NEEDS to be FIFO otherwise we won't make progress.
-      frontier.enqueue(curNode)
+      enqueuePlayNode(frontier, curNode)
     }
   }
   // At this point all nodes should be scored
