@@ -146,14 +146,14 @@ func (node *playNode) computeScore(allowUnscoredChild bool) (float32, error) {
 }
 
 func (node *playNode) updateScore() error {
-  if DEBUG {
-    fmt.Println("Computed score for node: " + node.toString())
-  }
   if score, err := node.computeScore(false); err != nil {
     return err
   } else {
     node.score = score
     node.isScored = true
+    if DEBUG {
+      fmt.Println("Computed score for node: " + node.toString())
+    }
     return nil
   }
 }

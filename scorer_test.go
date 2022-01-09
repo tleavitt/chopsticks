@@ -2,29 +2,26 @@ package main
 
 import (
   "fmt"
-  "errors"
   "testing"
 )
 
 
-func ensureAllNodesScored(root *playNode) error {
-  return ensureAllNodesScoredImpl(root, make(map[gameState]bool))
+func ensureAllNodesScored(root *playNode, t *testing.T) {
+  ensureAllNodesScoredImpl(root, t, make(map[gameState]bool))
 }
 
-func ensureAllNodesScoredImpl(root *playNode, visitedStates map[gameState]bool) error {
+func ensureAllNodesScoredImpl(root *playNode, t *testing.T, visitedStates map[gameState]bool) {
   if visitedStates[*root.gs] {
-    return nil
+    return
   }
   visitedStates[*root.gs] = true
   if !root.isScored {
-    return errors.New("Found unscored node: " + root.toString())
+    t.Fatalf("Found unscored node: %s", root.toString())
   }
   for _, child := range root.nextNodes {
-    if err := ensureAllNodesScoredImpl(child, visitedStates); err != nil {
-      return err
-    }
+    ensureAllNodesScoredImpl(child, t, visitedStates)
   }
-  return nil
+  return
 }
 
 func TestPropagateScores1(t *testing.T) {
@@ -46,7 +43,7 @@ func TestPropagateScores1(t *testing.T) {
   // Wire everything up
   addParentChildEdges(grandpaNode, dadNode, move{Left, Left})
 
-  addParentChildEdges(dadNode, dadNode, move{Right, Left})
+  addParentChildEdges(dadNode, sonNode, move{Right, Left})
 
   // Score
   leaves := make(map[gameState]*playNode, 1)
@@ -55,9 +52,12 @@ func TestPropagateScores1(t *testing.T) {
     t.Fatal(err.Error())
   }
 
-  ensureAllNodesScored(grandpaNode)
+  ensureAllNodesScored(grandpaNode, t)
+  fmt.Println("Grandpa: " + grandpaNode.toString())
+  fmt.Println("Dad: " + dadNode.toString())
+  fmt.Println("Son: " + sonNode.toString())
 
-  fmt.Println("starting TestPropagateScores")
+  fmt.Println("stopping TestPropagateScores")
 }
 
 func TestPropagateScoresFork(t *testing.T) {
@@ -95,7 +95,7 @@ func TestPropagateScoresFork(t *testing.T) {
     t.Fatal(err.Error())
   }
 
-  ensureAllNodesScored(one)
+  ensureAllNodesScored(one, t)
 
   fmt.Println("starting TestPropagateScoresFork")
 }
@@ -145,7 +145,7 @@ func TestPropagateScoresLoop(t *testing.T) {
     t.Fatal(err.Error())
   }
 
-  ensureAllNodesScored(entryNode)
+  ensureAllNodesScored(entryNode, t)
 
   fmt.Println("starting TestPropagateScoresLoop")
 }
