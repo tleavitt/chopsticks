@@ -152,7 +152,7 @@ func main() {
     },
     Action: func(c *cli.Context) error {
       gs := initGame()
-      var stateNode, _, _, solveErr = solve(gs)
+      var stateNode, _, _, _, solveErr = solve(gs)
       if solveErr != nil {
         fmt.Println("Error when solving: " + solveErr.Error())
         return nil

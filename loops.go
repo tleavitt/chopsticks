@@ -17,7 +17,7 @@ type loopGraph struct {
 
 // Returns true if the given play node is an exit node of the given loop graph.
 // Exit nodes are either not part of a loop or part of a different loop graph.
-func isExitNode(pn *playNode, lg *loopGraph) {
+func isExitNode(pn *playNode, lg *loopGraph) bool {
   return pn.ln == nil || pn.ln.lg != lg
 }
 
@@ -44,7 +44,7 @@ func createAndSetupLoopNode(pn *playNode, lg *loopGraph) *loopNode {
 }
 
 func createEmptyLoopGraph() *loopGraph {
-  return &loopGraph{nil,false,}
+  return &loopGraph{nil,}
 }
 
 func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
@@ -111,7 +111,7 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
 
 // Transforms a set of loop graphs into a map from loop graphs to their exit nodes
 func getExitAllExitNodes(loopGraphs map[*loopGraph]bool) map[*loopGraph]map[*playNode]bool {
-  graphsToExitNodes := make(map[*loopGraph]map[*playNode]bool, len(loopGraphs)
+  graphsToExitNodes := make(map[*loopGraph]map[*playNode]bool, len(loopGraphs))
   for lg, _ := range loopGraphs {
     graphsToExitNodes[lg] = getExitNodes(lg)
   }
@@ -119,7 +119,7 @@ func getExitAllExitNodes(loopGraphs map[*loopGraph]bool) map[*loopGraph]map[*pla
 }
 
 func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[*playNode][]*loopGraph {
-  exitNodesToLoopGraph = make(map[*playNode][]*loopGraph, len(loopsToExitNodes)) // underestimates size
+  exitNodesToLoopGraph := make(map[*playNode][]*loopGraph, len(loopsToExitNodes)) // underestimates size
   for lg, exitNodes := range loopsToExitNodes {
     for exitNode, _ := range exitNodes {
       var curLoops []*loopGraph
@@ -163,7 +163,7 @@ func getExitNodesImpl(ln *loopNode, visitedNodes map[*loopNode]bool, exitNodes m
 
   // DFS on the loop graph
   for nextLn, _ := range ln.nextNodes {
-    getExitNodesImpl(ln, visitedNodes, exitNodes)
+    getExitNodesImpl(nextLn, visitedNodes, exitNodes)
   }
 }
 

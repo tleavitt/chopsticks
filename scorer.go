@@ -153,7 +153,7 @@ func scoreLoop(lg *loopGraph) error {
   // Repeat BFS until all nodes in the loop are scored, OR until we run out of ways to propagate up the loop.
   for loopCount := 0; nodesToScore.size > 0; loopCount++ {
     if loopCount > 10000 {
-      return nil, nil, errors.New("maxLoopCount exceeded, possible error in BFS graph. nodesToScore: %s" + nodesToScore.toString(loopNodeToString))
+      return errors.New("maxLoopCount exceeded, possible error in BFS graph. nodesToScore: %s" + nodesToScore.toString(loopNodeToString))
     }
     curLoopNode, err := dequeueLoopNode(nodesToScore)
     if err != nil {
@@ -181,16 +181,16 @@ func scoreLoop(lg *loopGraph) error {
   }
   // Step four: go over the loop one last time and give all unscored nodes a heuristic score - they're stuck in an
   // infinite loop
-  scoreInfiniteLoops(ln)
-  // At this point, all nodes in the loop should be scored. Mark the loop as such.
-  lg.isScored = true
+  scoreInfiniteLoops(lg)
+  // At this point, all nodes in the loop should be scored.
+  return nil
 }
 
 func scoreInfiniteLoops(lg *loopGraph) {
   scoreInfiniteLoopsImpl(lg.head, make(map[*loopNode]bool))
 }
 
-func scoreInfiniteLoopsImpl(ln *loopNode, visiteNodes map[*loopNode]bool) {
+func scoreInfiniteLoopsImpl(ln *loopNode, visitedNodes map[*loopNode]bool) {
   // Base case: already been here
   if visitedNodes[ln] {
     return
@@ -202,7 +202,7 @@ func scoreInfiniteLoopsImpl(ln *loopNode, visiteNodes map[*loopNode]bool) {
     pn.score = pn.getHeuristicScore()
     pn.isScored = true
     if DEBUG {
-      fmt.Printf("Applied heuristic score to unscored loop node: %+v (%s)", ln, ln.pn.toString())
+      fmt.Printf("Applied heuristic score to unscored loop node: %+v (%s)\n", ln, ln.pn.toString())
     }
   }
 
@@ -213,7 +213,7 @@ func scoreInfiniteLoopsImpl(ln *loopNode, visiteNodes map[*loopNode]bool) {
 }
 
 func isScorable(node *playNode) bool {
-  return !parentNode.isScored && parentNode.allChildrenAreScored()
+  return !node.isScored && node.allChildrenAreScored()
 }
 
 func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) {
@@ -239,7 +239,7 @@ func enqueueAllScorableParentsImpl(ln *loopNode, scorableFrontier *DumbQueue, vi
   pn := ln.pn
   // Invariant: all loop nodes should be scored.
   if !pn.isScored {
-    return errors.New(fmr.Sprintf("Loop node is not scored: %+v", ln))
+    return errors.New(fmt.Sprintf("Loop node is not scored: %+v", ln))
   }
   // Enqueue scorable parents
   enqueueScorableParents(scorableFrontier, pn)
@@ -247,6 +247,7 @@ func enqueueAllScorableParentsImpl(ln *loopNode, scorableFrontier *DumbQueue, vi
   for childNode, _ := range ln.nextNodes {
     enqueueAllScorableParentsImpl(childNode, scorableFrontier, visitedNodes)
   }
+  return nil
 }
 
 func playNodeToString(pi interface{}) string {
@@ -299,10 +300,10 @@ func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGr
         // Sanity checks 
         exitNodes, okR := remainingExitNodes[lg]
         if !okR {
-          return errors.New(fmt.Sprintf("Loop graph is not present in remaining exit nodes map: %+v, %+v", loopGraph, remainingExitNodes)))
+          return errors.New(fmt.Sprintf("Loop graph is not present in remaining exit nodes map: %+v, %+v", lg, remainingExitNodes))
         } 
         if _, okE := exitNodes[curNode]; !okE {
-          return errors.New(fmt.Sprintf("Exit nodes does not contain play node: %+v, %+v", curNode, exitNodes)))
+          return errors.New(fmt.Sprintf("Exit nodes does not contain play node: %+v, %+v", curNode, exitNodes))
         }
 
         delete(exitNodes, curNode)
@@ -318,7 +319,7 @@ func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGr
   return nil
 }
 
-createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]bool) map[*loopGraph]bool {
+func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]bool) map[*loopGraph]bool {
   unscoredLoopGraphs := make(map[*loopGraph]bool, len(loopGraphs))
   for lg, _ := range loopGraphs {
     unscoredLoopGraphs[lg] = true
@@ -360,7 +361,7 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
     }
 
     // Find all loops with no unscored exit nodes, and score them.
-    curScoredLoopGraphs = []*loopGraph{}
+    curScoredLoopGraphs := []*loopGraph{}
     for lg, _ := range unscoredLoopGraphs {
       exitNodes := loopsToExitNodes[lg]
       if len(exitNodes) == 0 {
@@ -368,7 +369,7 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
           return err
         }
         // now: lg.isScored == true
-        if err := enqueueAllScorableParents(lg); err != nil {
+        if err := enqueueAllScorableParents(lg, scorableFrontier); err != nil {
           return err
         }
         // Record that we scored this graph
@@ -382,8 +383,11 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
     }
 
     // Propagate the scores
-    if err := propagateScores(scorableFrontier, loopsToExitNodes); err != nil {
+    if err := propagateScores(scorableFrontier, loopsToExitNodes, exitNodesToLoopGraph); err != nil {
       return err
     }
   }
+
+  // Done!
+  return nil
 }
