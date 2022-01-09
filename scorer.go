@@ -220,7 +220,7 @@ func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) {
   // Assume node has been scored; 
   // enqueue all parents of node that are now scorable (i.e. they are not scored but all their children are scored)
   for _, parentNode := range node.prevNodes {
-    if isScorable(node) {
+    if isScorable(parentNode) {
       enqueuePlayNode(scorableFrontier, parentNode)
     }
   }
@@ -348,6 +348,9 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
     enqueueScorableParents(scorableFrontier, leaf)
   }
 
+  if DEBUG {
+    fmt.Printf("scorePlayGraph: before loop: frontier size %d, unscoredLoopGraphs size %d\n", scorableFrontier.size, len(unscoredLoopGraphs))
+  }
   // Scoring iteration: consists of two steps.
   // Step 1: for all loops that have no unscored exit nodes, compute their scores and enqueue their scorable parents.
   // Step 2: propagate scores from the scorable frontier until the frontier is empty.
@@ -359,7 +362,9 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
     if loopCount > 10000 {
       return errors.New("maxLoopCount exceeded in scoring iteration, frontier: %s" + scorableFrontier.toString(playNodeToString))
     }
-
+    if DEBUG {
+      fmt.Printf("scorePlayGraph: loop count %d, frontier size %d, unscoredLoopGraphs size %d\n", loopCount, scorableFrontier.size, len(unscoredLoopGraphs))
+    }
     // Find all loops with no unscored exit nodes, and score them.
     curScoredLoopGraphs := []*loopGraph{}
     for lg, _ := range unscoredLoopGraphs {
