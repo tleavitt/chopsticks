@@ -181,11 +181,28 @@ func getHeuristicScoreForPlayer(p *player) float32 {
 
 // TODO: aggressive/defensive, apply more/less weight to my score vs their score
 func (node *playNode) getHeuristicScore() float32 {
-  var score float32 = 0
+  p1Heuristic := getHeuristicScoreForPlayer(&node.gs.player1)
+  p2Heuristic := getHeuristicScoreForPlayer(&node.gs.player2)
+
+  if p1Heuristic == -1 {
+    if p2Heuristic == -1 {
+      // This is an invalid state where both players are eliminated, but we don't have to modify the heuristics. just return 0
+    } else {
+      // Scale down the p2 heuristic by 100 since p2 has already won
+      p2Heuristic *= 0.01
+    }
+  } else {
+    if p2Heuristic == -1 {
+      // Scale down the p1 heuristic by 100 since p1 has already won
+      p1Heuristic *= 0.01
+      return p1Heuristic - p2Heuristic
+    } else {
+      // Don't modify the heuristics at all.
+    }
+  }
+
   // +1 means player 1 wins, -1 means player 2 wins. SO: we Need a negative sign in front of the second player
-  score += getHeuristicScoreForPlayer(&node.gs.player1)
-  score -= getHeuristicScoreForPlayer(&node.gs.player2)
-  return score
+  return p1Heuristic - p2Heuristic
 }
 
 func turnToSign(t Turn) float32 {

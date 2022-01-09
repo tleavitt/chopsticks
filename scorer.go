@@ -137,14 +137,14 @@ func scoreLoop(lg *loopGraph) error {
   nodesToScore := createDumbQueue() // Values are *loopNode
   if b1.node != nil {
     if DEBUG {
-      fmt.Printf("Most winnign node for p1: %+v (%f)", b1.node, b1.score)
+      fmt.Printf("Most winning node for p1: %+v (%f)\n", b1.node, b1.score)
     }
     applyScore(b1) 
     enqueueLoopParents(nodesToScore, b1.node)
   }
   if b2.node != nil {
     if DEBUG {
-      fmt.Printf("Most winnign node for p2: %+v (%f)", b2.node, b2.score)
+      fmt.Printf("Most winnign node for p2: %+v (%f)\n", b2.node, b2.score)
     }
     applyScore(b2) 
     enqueueLoopParents(nodesToScore, b2.node)
@@ -268,6 +268,38 @@ func dequeuePlayNode(dq *DumbQueue) (*playNode, error) {
   return pn.(*playNode), nil
 }
 
+func scoreNodeAndUpdateState(curNode *playNode, scorableFrontier *DumbQueue, 
+    remainingExitNodes map[*loopGraph]map[*playNode]bool, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
+  // Nodes on the scorable frontier must be scorable.
+  if !isScorable(curNode) {
+    return errors.New(fmt.Sprintf("Node on frontier is not scorable: %s", curNode.toString()))
+  }
+
+  // Score the node
+  if err := curNode.updateScore(); err != nil {
+    return err
+  }
+
+  // Check if this is an exit node, and update the remainingExitNodes map if so.
+  if lgs, ok := exitNodesToLoopGraph[curNode]; ok {
+    for _, lg := range lgs {
+      // Sanity checks 
+      exitNodes, okR := remainingExitNodes[lg]
+      if !okR {
+        return errors.New(fmt.Sprintf("Loop graph is not present in remaining exit nodes map: %+v, %+v", lg, remainingExitNodes))
+      } 
+      if _, okE := exitNodes[curNode]; !okE {
+        return errors.New(fmt.Sprintf("Exit nodes does not contain play node: %+v, %+v", curNode, exitNodes))
+      }
+
+      delete(exitNodes, curNode)
+    }
+  }
+
+  enqueueScorableParents(scorableFrontier, curNode) 
+  return nil
+}
+
 // Scored frontier vs Scorable frontier:
 // scored frontier consist of nodes that are likley to be able to be scored (but not a guarantee...) ???
 // Scored frontier: nodes that have been scored? why do we need these? we don't
@@ -284,33 +316,7 @@ func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGr
     if err != nil {
       return err
     }
-    // Nodes on the scorable frontier must be scorable.
-    if !isScorable(curNode) {
-      return errors.New(fmt.Sprintf("Node on frontier is not scorable: %s", curNode.toString()))
-    }
-
-    // Score the node
-    if err := curNode.updateScore(); err != nil {
-      return err
-    }
-
-    // Check if this is an exit node, and update the remainingExitNodes map if so.
-    if lgs, ok := exitNodesToLoopGraph[curNode]; ok {
-      for _, lg := range lgs {
-        // Sanity checks 
-        exitNodes, okR := remainingExitNodes[lg]
-        if !okR {
-          return errors.New(fmt.Sprintf("Loop graph is not present in remaining exit nodes map: %+v, %+v", lg, remainingExitNodes))
-        } 
-        if _, okE := exitNodes[curNode]; !okE {
-          return errors.New(fmt.Sprintf("Exit nodes does not contain play node: %+v, %+v", curNode, exitNodes))
-        }
-
-        delete(exitNodes, curNode)
-      }
-    }
-
-    enqueueScorableParents(scorableFrontier, curNode) 
+    scoreNodeAndUpdateState(curNode, scorableFrontier, remainingExitNodes, exitNodesToLoopGraph)
   }
   // Sanity check: we should have drained the scorable frontier now.
   if !scorableFrontier.isEmpty() {
@@ -342,14 +348,13 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
     if len(leaf.nextNodes) != 0 {
       return errors.New("Not a leaf: " + leaf.toString()) 
     }
-    if err := leaf.updateScore(); err != nil {
-      return err
-    }
-    enqueueScorableParents(scorableFrontier, leaf)
+    scoreNodeAndUpdateState(leaf, scorableFrontier, loopsToExitNodes, exitNodesToLoopGraph)
   }
 
   if DEBUG {
     fmt.Printf("scorePlayGraph: before loop: frontier size %d, unscoredLoopGraphs size %d\n", scorableFrontier.size, len(unscoredLoopGraphs))
+    fmt.Printf("Loops to exit nodes: %+v\n", loopsToExitNodes)
+    fmt.Printf("Exit nodes to loops: %+v\n", exitNodesToLoopGraph)
   }
   // Scoring iteration: consists of two steps.
   // Step 1: for all loops that have no unscored exit nodes, compute their scores and enqueue their scorable parents.
@@ -359,11 +364,13 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
   // We're done if the scorable frontier is empty and all loops have been scored, so we're not done if either 
   // there are nodes on the frontier, or there are unscored loop graphs
   for loopCount := 0; !scorableFrontier.isEmpty() || len(unscoredLoopGraphs) > 0; loopCount++ {
-    if loopCount > 10000 {
+    if loopCount > 100 {
       return errors.New("maxLoopCount exceeded in scoring iteration, frontier: %s" + scorableFrontier.toString(playNodeToString))
     }
     if DEBUG {
       fmt.Printf("scorePlayGraph: loop count %d, frontier size %d, unscoredLoopGraphs size %d\n", loopCount, scorableFrontier.size, len(unscoredLoopGraphs))
+      fmt.Printf("Loops to exit nodes: %+v\n", loopsToExitNodes)
+      fmt.Printf("Exit nodes to loops: %+v\n", exitNodesToLoopGraph)
     }
     // Find all loops with no unscored exit nodes, and score them.
     curScoredLoopGraphs := []*loopGraph{}

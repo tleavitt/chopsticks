@@ -97,7 +97,7 @@ func TestPropagateScoresFork(t *testing.T) {
 
   ensureAllNodesScored(one, t)
 
-  fmt.Println("starting TestPropagateScoresFork")
+  fmt.Println("stopping TestPropagateScoresFork")
 }
 
 func TestPropagateScoresLoop(t *testing.T) {
@@ -147,8 +147,154 @@ func TestPropagateScoresLoop(t *testing.T) {
 
   ensureAllNodesScored(entryNode, t)
 
-  fmt.Println("starting TestPropagateScoresLoop")
+  fmt.Println("stopping TestPropagateScoresLoop")
 }
+
+func TestPropagateScoresLoop2(t *testing.T) {
+  fmt.Println("starting TestPropagateScoresLoop2")
+
+  // The three-four loop:
+  entry := &gameState{
+    player{1, 4}, player{0, 3}, Player2,
+  }
+  // => RH->LH
+  one := &gameState{
+    player{0, 4}, player{0, 3}, Player1,
+  } // All the rest are RH->RH
+  two := &gameState{
+    player{0, 4}, player{0, 2}, Player2,
+  }
+  three := &gameState{
+    player{0, 1}, player{0, 2}, Player1,
+  }
+  four := &gameState{
+    player{0, 1}, player{0, 3}, Player2,
+  } // Then we loop back to one
+
+  exit := &gameState{
+    player{0, 1}, player{0, 0}, Player2,
+  }
+
+  entryNode := createPlayNodeCopyGs(entry)
+  oneNode := createPlayNodeCopyGs(one)
+  twoNode := createPlayNodeCopyGs(two)
+  threeNode := createPlayNodeCopyGs(three)
+  exitNode := createPlayNodeCopyGs(exit)
+  fourNode := createPlayNodeCopyGs(four)
+
+  // Wire everything up, note that moves don't actually matter here.
+  addParentChildEdges(entryNode, oneNode, move{Right, Left})
+  addParentChildEdges(oneNode, twoNode, move{Right, Right})
+  addParentChildEdges(twoNode, threeNode, move{Right, Right})
+  addParentChildEdges(threeNode, fourNode, move{Right, Right})
+  addParentChildEdges(threeNode, exitNode, move{Right, Left})
+  addParentChildEdges(fourNode, oneNode, move{Right, Right})
+
+  leaves := map[gameState]*playNode{
+    *exitNode.gs: exitNode,
+  }
+
+  loops := [][]*playNode{
+    []*playNode{oneNode, twoNode, threeNode, fourNode},
+  } 
+  loopGraphs := createDistinctLoopGraphs(loops) 
+
+  if err := scorePlayGraph(leaves, loopGraphs); err != nil {
+    t.Fatal(err.Error())
+  }
+
+  ensureAllNodesScored(entryNode, t)
+
+  fmt.Println("stopping TestPropagateScoresLoop2")
+}
+
+func TestPropagateScoresComplex(t *testing.T) {
+  fmt.Println("starting TestPropagateScoresComplex")
+
+  entry := &gameState{
+    player{1, 4}, player{0, 3}, Player2,
+  }
+
+  dad := &gameState{
+    player{1, 2}, player{0, 3}, Player1,
+  }
+
+  bro := &gameState{
+    player{1, 2}, player{0, 1}, Player2,
+  }
+
+  sis := &gameState{
+    player{1, 2}, player{0, 2}, Player2,
+  }
+
+  sis2 := &gameState{
+    player{1, 2}, player{0, 4}, Player2,
+  }
+
+  // => RH->LH
+  one := &gameState{
+    player{0, 4}, player{0, 3}, Player1,
+  } // All the rest are RH->RH
+  two := &gameState{
+    player{0, 4}, player{0, 2}, Player2,
+  }
+  three := &gameState{
+    player{0, 1}, player{0, 2}, Player1,
+  }
+  four := &gameState{
+    player{0, 1}, player{0, 3}, Player2,
+  } // Then we loop back to one
+
+  exit := &gameState{
+    player{0, 1}, player{0, 0}, Player2,
+  }
+
+  entryNode := createPlayNodeCopyGs(entry)
+  oneNode := createPlayNodeCopyGs(one)
+  twoNode := createPlayNodeCopyGs(two)
+  threeNode := createPlayNodeCopyGs(three)
+  exitNode := createPlayNodeCopyGs(exit)
+  fourNode := createPlayNodeCopyGs(four)
+
+  dadNode := createPlayNodeCopyGs(dad)
+  broNode := createPlayNodeCopyGs(bro)
+  sisNode := createPlayNodeCopyGs(sis)
+  sis2Node := createPlayNodeCopyGs(sis2)
+
+  // Wire everything up, note that moves don't actually matter here.
+  addParentChildEdges(entryNode, oneNode, move{Right, Left})
+  addParentChildEdges(oneNode, twoNode, move{Right, Right})
+  addParentChildEdges(twoNode, threeNode, move{Right, Right})
+  addParentChildEdges(threeNode, fourNode, move{Right, Right})
+  addParentChildEdges(threeNode, exitNode, move{Right, Left})
+  addParentChildEdges(fourNode, oneNode, move{Right, Right})
+
+  addParentChildEdges(entryNode, dadNode, move{Left, Left})
+  addParentChildEdges(dadNode, broNode, move{Left, Left})
+  addParentChildEdges(dadNode, sisNode, move{Left, Right})
+  addParentChildEdges(dadNode, sis2Node, move{Right, Left})
+
+  leaves := map[gameState]*playNode{
+    *broNode.gs: broNode,
+    *sisNode.gs: sisNode,
+    *sis2Node.gs: sis2Node,
+    *exitNode.gs: exitNode,
+  }
+
+  loops := [][]*playNode{
+    []*playNode{oneNode, twoNode, threeNode, fourNode},
+  } 
+  loopGraphs := createDistinctLoopGraphs(loops) 
+
+  if err := scorePlayGraph(leaves, loopGraphs); err != nil {
+    t.Fatal(err.Error())
+  }
+
+  ensureAllNodesScored(entryNode, t)
+
+  fmt.Println("stopping TestPropagateScoresComplex")
+}
+
 
 func createSimpleLoop() [][]*playNode {
   gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
