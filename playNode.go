@@ -260,24 +260,22 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   var sb strings.Builder
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)
-  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f, isScored:%t prevNodes:%+v ln: %v", node.gs.toString(), node.score, node.isScored, node.prevNodes, node.ln)) 
+  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f, isScored:%t prevNodes:%+v ln: %v ", node.gs.toString(), node.score, node.isScored, node.prevNodes, node.ln)) 
   printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
     sb.WriteString("leafNode}")
   } else {
     sb.WriteString("nextNodes:\n")
-    for nextMove, nextNode := range node.nextNodes { 
+    for _, nextNode := range node.nextNodes { 
       // One more space
-      sb.WriteString(buf + " ")
-      sb.WriteString(fmt.Sprintf("%+v\n", nextMove))
       if printedStates[*nextNode.gs] {
         sb.WriteString(buf + " ")
-        sb.WriteString("<previously printed>")
+        sb.WriteString(fmt.Sprintf("%p <previously printed>", nextNode))
       } else if curDepth < maxDepth {
         sb.WriteString(nextNode.toStringImpl(curDepth + 1, maxDepth, printedStates))
       } else {
         sb.WriteString(buf + " ")
-        sb.WriteString("...")
+        sb.WriteString(fmt.Sprintf("%p", nextNode))
       }
       sb.WriteString("\n")
     } 

@@ -72,20 +72,28 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
     for it, pn := range loop {
       var curLoopNode *loopNode
       if pn.ln != nil {
-        // Special case: this node is already part of another loop
-        // Remove the current loop graph and use the existing one
-        delete(loopGraphs, curLoopGraph)
-        // Set all the loop graph nodes in the current loop to the new loop graph
-        existingLoopGraph := pn.ln.lg
-        // If the current loop graph has a head defined, update it and all it's children.
-      // The head could be undefined if this is the first time we're going through the update loop.
-        if head := curLoopGraph.head; head != nil {
-          setNewLoopGraphForAll(head, existingLoopGraph)
+        // Special case: this node is already part of a loop. It could be the same loop
+        // or a different one. If it's a different one we need to merge the loop graphs.
+        if pn.ln.lg != curLoopGraph {
+          // Remove the current loop graph and use the existing one
+          delete(loopGraphs, curLoopGraph)
+          fmt.Printf("Merging loop graph %p into existing loop graph %p\n", curLoopGraph, pn.ln.lg)
+          // 
+          // Set all the loop graph nodes in the current loop to the new loop graph
+          existingLoopGraph := pn.ln.lg
+          // If the current loop graph has a head defined, update it and all it's children.
+        // The head could be undefined if this is the first time we're going through the update loop.
+          if head := curLoopGraph.head; head != nil {
+            setNewLoopGraphForAll(head, existingLoopGraph)
+          }
+
+          // Update the curLoopGraph for future iterations
+          curLoopGraph = existingLoopGraph
         }
 
-        // Update the curLoopGraph for future iterations
-        curLoopGraph = existingLoopGraph
-        // Set the current loop node to the existing node
+        // Set the current loop node to the existing node.
+        // Note: if this is part of the same loop graph, it means we'll end up doing
+        // repeated work, but that's ok.
         curLoopNode = pn.ln
       } else {
         curLoopNode = createAndSetupLoopNode(pn, curLoopGraph)
@@ -133,6 +141,7 @@ func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[
       existingLoops, ok := exitNodesToLoopGraph[exitNode]
       if ok {
         // TODO: how common is it to have multiple loop graphs for the same exit node?
+        // It happens for num_fingers == 4....
         if DEBUG {
           fmt.Printf("Found exit node for %d loop graphs\n", len(existingLoops) + 1)
         }

@@ -9,7 +9,7 @@ func testSolveTreeValid(t *testing.T) {
   startState := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }
-  stateNode, existingStates, leaves, _, solveErr := solve(&startState)
+  stateNode, existingStates, leaves, _, solveErr := solve(&startState, 15)
   gps := createGamePlayState(&startState)
   if solveErr != nil {
     t.Fatal(solveErr.Error())
@@ -104,7 +104,7 @@ func TestSolveBestMoves(t *testing.T) {
   startState := gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
-  stateNode, _, _, _, err := solve(&startState)
+  stateNode, _, _, _, err := solve(&startState, 15)
   if err != nil {
     t.Fatal(err.Error())
   }
