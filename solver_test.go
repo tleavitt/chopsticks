@@ -7,7 +7,7 @@ import (
 
 func TestSolveTreeValid(t *testing.T) {
   fmt.Println("starting TestSolveTreeValid")
-  prevNumFingers := setNumFingers(4)
+  prevNumFingers := setNumFingers(3)
   startState := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }

@@ -207,6 +207,7 @@ func (node *playNode) getHeuristicScore() float32 {
   if p1Heuristic == -1 {
     if p2Heuristic == -1 {
       // This is an invalid state where both players are eliminated, but we don't have to modify the heuristics. just return 0
+      return 0
     } else {
       // p2 wins, return -1
       return -1
@@ -216,12 +217,10 @@ func (node *playNode) getHeuristicScore() float32 {
       // p1 wins, return +1
       return 1
     } else {
-      // Don't modify the heuristics at all.
+      // Don't modify the heuristics at all, we're not in a terminal case.
+      return p1Heuristic - p2Heuristic
     }
   }
-
-  // +1 means player 1 wins, -1 means player 2 wins. SO: we Need a negative sign in front of the second player
-  return p1Heuristic - p2Heuristic
 }
 
 func turnToSign(t Turn) float32 {

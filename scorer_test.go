@@ -24,7 +24,7 @@ func ensureAllNodesScoredImpl(root *playNode, t *testing.T, visitedStates map[ga
   return
 }
 
-func TestPropagateScores1(t *testing.T) {
+func TestScorePropagateScores(t *testing.T) {
   fmt.Println("starting TestPropagateScores")
 
   grandpa := &gameState{
@@ -60,7 +60,7 @@ func TestPropagateScores1(t *testing.T) {
   fmt.Println("stopping TestPropagateScores")
 }
 
-func TestPropagateScoresFork(t *testing.T) {
+func TestScorePropagateScoresFork(t *testing.T) {
   fmt.Println("starting TestPropagateScoresFork")
 
   oneS := &gameState{
@@ -100,7 +100,7 @@ func TestPropagateScoresFork(t *testing.T) {
   fmt.Println("stopping TestPropagateScoresFork")
 }
 
-func TestPropagateScoresLoop(t *testing.T) {
+func TestScorePropagateScoresLoop(t *testing.T) {
   fmt.Println("starting TestPropagateScoresLoop")
 
   // The three-four loop:
@@ -150,7 +150,7 @@ func TestPropagateScoresLoop(t *testing.T) {
   fmt.Println("stopping TestPropagateScoresLoop")
 }
 
-func TestPropagateScoresLoop2(t *testing.T) {
+func TestScorePropagateScoresLoop2(t *testing.T) {
   fmt.Println("starting TestPropagateScoresLoop2")
 
   // The three-four loop:
@@ -208,7 +208,7 @@ func TestPropagateScoresLoop2(t *testing.T) {
   fmt.Println("stopping TestPropagateScoresLoop2")
 }
 
-func TestPropagateScoresComplex(t *testing.T) {
+func TestScorePropagateScoresComplex(t *testing.T) {
   fmt.Println("starting TestPropagateScoresComplex")
 
   entry := &gameState{
@@ -306,7 +306,7 @@ func createSimpleLoop() [][]*playNode {
   return loops
 }
 
-func TestMostWinningNodesSimple(t *testing.T) {
+func TestScoreMostWinningNodesSimple(t *testing.T) {
   fmt.Println("starting TestMostWinningNodesSimple")
   // Note: no exit nodes here.
   loops := createSimpleLoop()
@@ -432,7 +432,7 @@ func createInterlockedLoops() ([][]*playNode, map[gameState]*playNode) {
   return loops, exitNodes
 }
 
-func TestMostWinningNodesInterlinked(t *testing.T) {
+func TestScoreMostWinningNodesInterlinked(t *testing.T) {
   fmt.Println("starting TestMostWinningNodesInterlinked")
   loops, _ := createInterlockedLoops()
   distinctLoopGraphs := createDistinctLoopGraphs(loops) 

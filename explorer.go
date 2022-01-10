@@ -11,7 +11,7 @@ import (
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
 func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
-  return exploreStatesImpl(startNode, []*playNode{startNode}, make(map[gameState]*playNode, 4), make(map[gameState]*playNode, 4), make([][]*playNode, 0), 0, maxDepth)
+  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[gameState]*playNode, 4), make([][]*playNode, 0), 0, maxDepth)
 }
 
 // Yes, O(N) search. Whatever, it's probably fine

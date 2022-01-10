@@ -8,8 +8,8 @@ const DEFAULT_MAX_DEPTH int = 15
 
 // Generate a play strategy given a starting game state. 
 func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*playNode, map[*loopGraph]bool, error) {
-  visitedStates := make(map[gameState]*playNode, 10)
   // Step one: explore all possible states, and identify loops
+  visitedStates := make(map[gameState]*playNode, 10)
   root, leaves, loops, err := exploreStates(createPlayNodeCopyGs(gs), visitedStates, DEFAULT_MAX_DEPTH)
   if err != nil {
     return nil, nil, nil, nil, err

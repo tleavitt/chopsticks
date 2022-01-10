@@ -99,7 +99,7 @@ func expectInvalidGraph(startNode *playNode, t *testing.T) {
   fmt.Printf("Validate edges caught invalid graph: %s\n", err.Error())
 }
 
-func TestInvalidGraphParent(t *testing.T) {
+func TestExploreInvalidGraphParent(t *testing.T) {
   fmt.Println("starting TestInvalidGraphParent")
   startState := &gameState{
     player{1, 1}, player{1, 1}, Player1,
@@ -115,7 +115,7 @@ func TestInvalidGraphParent(t *testing.T) {
   fmt.Println("finished TestInvalidGraphParent")
 }
 
-func TestInvalidGraphChild(t *testing.T) {
+func TestExploreInvalidGraphChild(t *testing.T) {
   fmt.Println("starting TestInvalidGraphChild")
   grandpa := &gameState{
     player{1, 1}, player{1, 1}, Player1,
