@@ -97,7 +97,7 @@ func TestSolveBestMoves(t *testing.T) {
       fmt.Println("Hit leaf node, exiting")
       break;
     }
-    bestMove, _, err := curNode.getBestMoveAndScore(false, false)
+    bestMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(false, false)
     if err != nil {
       t.Fatal(err.Error())
     }

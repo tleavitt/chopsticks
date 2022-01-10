@@ -95,7 +95,7 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
     // If there are exit nodes: update the best move score. Otherwise just keep chugging along, we don't want to update
     // the scores to zeros or some other value
     if len(nodesToScore) > 0 {
-      _, curScore, err := getBestMoveAndScore(nodesToScore, false, false)
+      _, curScore, err := getBestMoveAndScoreForCurrentPlayer(nodesToScore, false, false)
       if err != nil {
         return nil, nil, err
       }

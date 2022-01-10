@@ -393,18 +393,6 @@ func createInterlockedLoops() ([][]*playNode, map[gameState]*playNode) {
   exitNode4.score = 0
   exitNode4.isScored = true
 
-  m := move{Left, Left} // The specific move doesn't matter, just the edges
-
-  // One winning exit node for 23
-  pn23.nextNodes[m] = exitNode1
-
-  // One winning and one losing exit node for 34
-  pn34.nextNodes[m] = exitNode2 //
-  pn34.nextNodes[move{Left, Right}] = exitNode3 //
-
-  // One neutral exit node for common1
-  commonNode1.nextNodes[m] = exitNode4
-
   exitNodes := map[gameState]*playNode{
     *exitNode1.gs: exitNode1,
     *exitNode2.gs: exitNode2,

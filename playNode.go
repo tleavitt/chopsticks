@@ -87,7 +87,7 @@ func createPlayNodeReuseGs(gs *gameState) *playNode {
 
 // Scores
 // Note: the node must not be a leaf (i.e. it must have children) or this function will fail
-func getBestMoveAndScore(childNodes map[move]*playNode, log bool, allowUnscoredChild bool) (move, float32, error) {
+func getBestMoveAndScoreForCurrentPlayer(childNodes map[move]*playNode, log bool, allowUnscoredChild bool) (move, float32, error) {
   // Our best move is the move that puts our opponent in the worst position.
   // The score of the current node is the negative of the score of our opponent in the node after our best move.
   var worstNextScoreForOpp float32 = 2 // This is an impossible score, so we should always trigger an update in the loop.
@@ -112,7 +112,7 @@ func getBestMoveAndScore(childNodes map[move]*playNode, log bool, allowUnscoredC
     }
   }
   if worstNextScoreForOpp > 1 || worstNextScoreForOpp < -1 {
-    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScore: no best move found, worst next score for opp: %f", worstNextScoreForOpp))
+    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScoreForCurrentPlayer: no best move found, worst next score for opp: %f", worstNextScoreForOpp))
   } else {
     // Note the negative sign!! worst score for opp is the best score for us.
     if log {
@@ -122,11 +122,11 @@ func getBestMoveAndScore(childNodes map[move]*playNode, log bool, allowUnscoredC
   }
 }
 
-func (node *playNode) getBestMoveAndScore(log bool, allowUnscoredChild bool) (move, float32, error) {
+func (node *playNode) getBestMoveAndScoreForCurrentPlayer(log bool, allowUnscoredChild bool) (move, float32, error) {
   if log {
-    fmt.Printf("-- Running getBestMoveAndScore() for %+v\n", node.gs)
+    fmt.Printf("-- Running getBestMoveAndScoreForCurrentPlayer() for %+v\n", node.gs)
   }
-  return getBestMoveAndScore(node.nextNodes, log, allowUnscoredChild)
+  return getBestMoveAndScoreForCurrentPlayer(node.nextNodes, log, allowUnscoredChild)
 }
 
 
@@ -137,11 +137,11 @@ func (node *playNode) computeScore(allowUnscoredChild bool) (float32, error) {
     return node.getHeuristicScore(), nil
   } else {
     // Compute the score based on child moves. 
-    _, score, err := node.getBestMoveAndScore(false, allowUnscoredChild)
+    _, scoreForCurrentPlayer, err := node.getBestMoveAndScoreForCurrentPlayer(false, allowUnscoredChild)
     if err != nil {
       return 0, err
     }
-    return score, nil
+    return turnToSign(node.gs.turn) * scoreForCurrentPlayer, nil
   }
 }
 
@@ -161,28 +161,19 @@ func (node *playNode) updateScore() error {
   }
 }
 
-func (node *playNode) maxChildScoreForPlayer() {
-  if DEBUG {
-    fmt.Printf("--Checking children of %+s\n", node.toString())
-  }
-  maxScore := -2.0
+func (node *playNode) maxChildScoreForPlayer() float32 {
+  var maxScore float32 = -2.0
+  turnSign := turnToSign(node.gs.turn)
   for _, child := range node.nextNodes {
     if !child.isScored {
-      if DEBUG {
-        fmt.Printf("--child is not scored: %+v\n", child)
-      }
+      continue
     }
-    if DEBUG {
-      fmt.Printf("--child score: %f\n", child.score)
-    }
-    childScoreForOtherPlayer := child.scoreForCurrentPlayer()
-    childScoreForCurrentPlayer := -childScoreForOtherPlayer
+    childScore := child.score
+    childScoreForCurrentPlayer := turnSign * childScore
+
     if childScoreForCurrentPlayer > maxScore {
       maxScore = childScoreForCurrentPlayer
     }
-  }
-  if DEBUG {
-    fmt.Printf("--max score for current player: %f\n", maxScore)
   }
   return maxScore
 }
@@ -190,13 +181,7 @@ func (node *playNode) maxChildScoreForPlayer() {
 func (node *playNode) allChildrenAreScored() bool {
   for _, child := range node.nextNodes {
     if !child.isScored {
-      if DEBUG {
-        fmt.Printf("--child is not scored: %+v\n", child)
-      }
       return false
-    }
-    if DEBUG {
-      fmt.Printf("--child score: %f\n", child.score)
     }
   }
   return true
