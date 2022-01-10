@@ -344,26 +344,24 @@ func TestScoreSimpleLoop(t *testing.T) {
       }
     }
   }
+  fmt.Println("stopping TestScoreSimpleLoop")
 }
 
-func createInterlockedLoops() [][]*playNode {
-  gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
-  gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
-
+func createInterlockedLoops() ([][]*playNode, map[gameState]*playNode) {
   // Odd numbers are player1's turn, even numbers are player 2's turn
-  commonNode1 := createPlayNodeCopyGs(gs1) // 1
-  commonNode2 := createPlayNodeCopyGs(gs2) // 2
+  commonNode1 := createPlayNodeCopyGs(&gameState{player{1, 3,}, player{2, 1,}, Player1,}) // 1
+  commonNode2 := createPlayNodeCopyGs(&gameState{player{2, 4,}, player{3, 2,}, Player2,}) // 2
 
-  pn11 := createPlayNodeCopyGs(gs1) // 1
-  pn12 := createPlayNodeCopyGs(gs2) // 2
-  pn14 := createPlayNodeCopyGs(gs2) // 2
+  pn11 := createPlayNodeCopyGs(&gameState{player{1, 1,}, player{1, 1,}, Player1,}) // 1
+  pn12 := createPlayNodeCopyGs(&gameState{player{1, 2,}, player{1, 2,}, Player2,}) // 2
+  pn14 := createPlayNodeCopyGs(&gameState{player{1, 4,}, player{1, 4,}, Player2,}) // 2
 
-  pn22 := createPlayNodeCopyGs(gs2) // 2
-  pn23 := createPlayNodeCopyGs(gs1) // 1
+  pn22 := createPlayNodeCopyGs(&gameState{player{2, 2,}, player{2, 2,}, Player2,}) // 2
+  pn23 := createPlayNodeCopyGs(&gameState{player{2, 3,}, player{2, 3,}, Player1,}) // 1
 
-  pn31 := createPlayNodeCopyGs(gs1) // 1
-  pn33 := createPlayNodeCopyGs(gs1) // 1
-  pn34 := createPlayNodeCopyGs(gs2) // 2
+  pn31 := createPlayNodeCopyGs(&gameState{player{3, 1,}, player{3, 1,}, Player1,}) // 1
+  pn33 := createPlayNodeCopyGs(&gameState{player{3, 3,}, player{3, 3,}, Player1,}) // 1
+  pn34 := createPlayNodeCopyGs(&gameState{player{3, 4,}, player{3, 4,}, Player2,}) // 2
 
   loops := [][]*playNode{
     []*playNode{pn11, pn12, commonNode1, pn14},
@@ -379,13 +377,13 @@ func createInterlockedLoops() [][]*playNode {
 
   // ExitNode 2: player2 will win 
   exitNode2 := createPlayNodeReuseGs(&gameState{
-    player{0, 2,}, player{2, 2,}, Player1,})
+    player{0, 0,}, player{2, 2,}, Player1,})
   exitNode2.score = -1
   exitNode2.isScored = true
 
   // Exit Node 3: player1 will win
   exitNode3 := createPlayNodeReuseGs(&gameState{
-    player{0, 1,}, player{0, 1,}, Player1,})
+    player{0, 1,}, player{0, 0,}, Player1,})
   exitNode3.score = 1
   exitNode3.isScored = true
 
@@ -407,12 +405,48 @@ func createInterlockedLoops() [][]*playNode {
   // One neutral exit node for common1
   commonNode1.nextNodes[m] = exitNode4
 
-  return loops
+  exitNodes := map[gameState]*playNode{
+    *exitNode1.gs: exitNode1,
+    *exitNode2.gs: exitNode2,
+    *exitNode3.gs: exitNode3,
+    *exitNode4.gs: exitNode4,
+  }
+
+  // Wire it all up
+  // Loop 1
+  addParentChildEdges(pn11, pn12, move{Right, Left})
+  addParentChildEdges(pn12, commonNode1, move{Right, Left})
+  addParentChildEdges(commonNode1, pn14, move{Right, Left})
+  addParentChildEdges(pn14, pn11, move{Right, Left})
+
+  // One neutral exit node for common1
+  addParentChildEdges(commonNode1, exitNode4, move{Left, Left})
+
+  // Loop 2
+  addParentChildEdges(commonNode1, pn22, move{Left, Right})
+  addParentChildEdges(pn22, pn23, move{Left, Right})
+  addParentChildEdges(pn23, commonNode2, move{Left, Right})
+  addParentChildEdges(commonNode2, commonNode1, move{Left, Right})
+
+  // One winning exit node for 23
+  addParentChildEdges(pn23, exitNode1, move{Left, Left})
+
+  // Loop 3
+  addParentChildEdges(pn31, commonNode2, move{Right, Left})
+  addParentChildEdges(commonNode2, pn33, move{Right, Left})
+  addParentChildEdges(pn33, pn34, move{Right, Left})
+  addParentChildEdges(pn34, pn31, move{Right, Left})
+
+    // One winning and one losing exit node for 34
+  addParentChildEdges(pn34, exitNode2, move{Left, Left})
+  addParentChildEdges(pn34, exitNode3, move{Left, Right})
+
+  return loops, exitNodes
 }
 
 func TestMostWinningNodesInterlinked(t *testing.T) {
   fmt.Println("starting TestMostWinningNodesInterlinked")
-  loops := createInterlockedLoops()
+  loops, _ := createInterlockedLoops()
   distinctLoopGraphs := createDistinctLoopGraphs(loops) 
   if len(distinctLoopGraphs) != 1 {
     t.Fatal("Did not join distinct loops into one")
@@ -438,4 +472,41 @@ func TestMostWinningNodesInterlinked(t *testing.T) {
   }
 
   fmt.Println("finished TestMostWinningNodesInterlinked")
+}
+
+func TestScoreInterlocked(t *testing.T) {
+  fmt.Println("starting TestScoreInterlocked")
+  // Note: no exit nodes here.
+  loops, _ := createInterlockedLoops()
+  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  lg := getFirstLoopGraph(distinctLoopGraphs)
+  if err := scoreLoop(lg); err != nil {
+    t.Fatal(err.Error())
+  }
+  for i, loop := range loops {
+    for j, node := range loop {
+      // No node should have a zero score:
+      fmt.Printf("pn[%d][%d].score = %+v\n", i + 1, j + 1, node)
+      if !node.isScored || node.score == 0 {
+        // t.Fatalf("Incorrectly scored node: loops[%d][%d] = %+v", i, j, node)
+      }
+    }
+  }
+  // Spot checks
+  pn11 := loops[0][0]
+  if pn11.score < 0.9 {
+    t.Fatalf("pn11 has incorrect score: %+v", pn11)
+  }
+
+  commonNode1 := loops[0][2]
+  if commonNode1.score < 0.9 {
+    t.Fatalf("commonNode1 has incorrect score: %+v", commonNode1)
+  }
+
+  pn31 := loops[2][0]
+  if pn31.score > -0.9 {
+    t.Fatalf("pn31 has incorrect score: %+v", pn31)
+  }
+
+  fmt.Println("stopping TestScoreInterlocked")
 }

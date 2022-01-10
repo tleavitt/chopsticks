@@ -147,6 +147,9 @@ func (node *playNode) computeScore(allowUnscoredChild bool) (float32, error) {
 
 func (node *playNode) updateScore() error {
   if score, err := node.computeScore(false); err != nil {
+    if DEBUG {
+      fmt.Println("ERR when updating score: " + node.toString())
+    }
     return err
   } else {
     node.score = score
@@ -158,10 +161,42 @@ func (node *playNode) updateScore() error {
   }
 }
 
+func (node *playNode) maxChildScoreForPlayer() {
+  if DEBUG {
+    fmt.Printf("--Checking children of %+s\n", node.toString())
+  }
+  maxScore := -2.0
+  for _, child := range node.nextNodes {
+    if !child.isScored {
+      if DEBUG {
+        fmt.Printf("--child is not scored: %+v\n", child)
+      }
+    }
+    if DEBUG {
+      fmt.Printf("--child score: %f\n", child.score)
+    }
+    childScoreForOtherPlayer := child.scoreForCurrentPlayer()
+    childScoreForCurrentPlayer := -childScoreForOtherPlayer
+    if childScoreForCurrentPlayer > maxScore {
+      maxScore = childScoreForCurrentPlayer
+    }
+  }
+  if DEBUG {
+    fmt.Printf("--max score for current player: %f\n", maxScore)
+  }
+  return maxScore
+}
+
 func (node *playNode) allChildrenAreScored() bool {
   for _, child := range node.nextNodes {
     if !child.isScored {
+      if DEBUG {
+        fmt.Printf("--child is not scored: %+v\n", child)
+      }
       return false
+    }
+    if DEBUG {
+      fmt.Printf("--child score: %f\n", child.score)
     }
   }
   return true
@@ -188,14 +223,13 @@ func (node *playNode) getHeuristicScore() float32 {
     if p2Heuristic == -1 {
       // This is an invalid state where both players are eliminated, but we don't have to modify the heuristics. just return 0
     } else {
-      // Scale down the p2 heuristic by 100 since p2 has already won
-      p2Heuristic *= 0.01
+      // p2 wins, return -1
+      return -1
     }
   } else {
     if p2Heuristic == -1 {
-      // Scale down the p1 heuristic by 100 since p1 has already won
-      p1Heuristic *= 0.01
-      return p1Heuristic - p2Heuristic
+      // p1 wins, return +1
+      p1Heuristic = 1
     } else {
       // Don't modify the heuristics at all.
     }
@@ -242,7 +276,7 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   var sb strings.Builder
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)
-  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f, isScored:%t prevNodes:%+v ", node.gs.toString(), node.score, node.isScored, node.prevNodes)) 
+  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f, isScored:%t prevNodes:%+v ln: %v", node.gs.toString(), node.score, node.isScored, node.prevNodes, node.ln)) 
   printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
     sb.WriteString("leafNode}")

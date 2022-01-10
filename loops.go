@@ -109,6 +109,13 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   return loopGraphs
 }
 
+func getFirstLoopGraph(loopGraphs map[*loopGraph]bool) *loopGraph {
+  for lg, _ := range loopGraphs {
+    return lg
+  }
+  return nil
+}
+
 // Transforms a set of loop graphs into a map from loop graphs to their exit nodes
 func getExitAllExitNodes(loopGraphs map[*loopGraph]bool) map[*loopGraph]map[*playNode]bool {
   graphsToExitNodes := make(map[*loopGraph]map[*playNode]bool, len(loopGraphs))

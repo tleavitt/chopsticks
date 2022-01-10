@@ -136,18 +136,18 @@ func scoreLoop(lg *loopGraph) error {
   // Add the loop-parents of the most winning nodes to 
   nodesToScore := createDumbQueue() // Values are *loopNode
   if b1.node != nil {
-    if DEBUG {
-      fmt.Printf("Most winning node for p1: %+v (%f)\n", b1.node, b1.score)
-    }
     applyScore(b1) 
     enqueueLoopParents(nodesToScore, b1.node)
+    if DEBUG {
+      fmt.Printf("Most winning node for p1: %s (%f)\n", b1.node.pn.toString(), b1.score)
+    }
   }
   if b2.node != nil {
-    if DEBUG {
-      fmt.Printf("Most winnign node for p2: %+v (%f)\n", b2.node, b2.score)
-    }
     applyScore(b2) 
     enqueueLoopParents(nodesToScore, b2.node)
+    if DEBUG {
+      fmt.Printf("Most winning node for p2: %s (%f)\n", b2.node.pn.toString(), b2.score)
+    }
   }
   // Step three: propagate the scores up **within the loop** from the most winning nodes. 
   // Repeat BFS until all nodes in the loop are scored, OR until we run out of ways to propagate up the loop.
@@ -156,6 +156,7 @@ func scoreLoop(lg *loopGraph) error {
       return errors.New("maxLoopCount exceeded, possible error in BFS graph. nodesToScore: %s" + nodesToScore.toString(loopNodeToString))
     }
     curLoopNode, err := dequeueLoopNode(nodesToScore)
+    fmt.Printf("Dequeued: %s\n", curLoopNode.pn.toString())
     if err != nil {
       return err
     }
@@ -163,26 +164,39 @@ func scoreLoop(lg *loopGraph) error {
     // If node is already scored, we've already processed it, so skip.
     if curPlayNode.isScored {
       if DEBUG {
-        fmt.Printf("Loop node is already scored, skipping: %s", curPlayNode.toString())
+        fmt.Printf("Loop node is already scored, skipping: %s\n", curPlayNode.toString())
       }
       continue
     }
     // If all children are scored, we can score this node. If NOT all children are scored, there's another branch of the loop we have to climb up
     // OR this is an infinite loop, so don't enqueue parents.
+    // EDIT: this is not necessarily true for loop junctions... we could get to a point where the other branch of the loop junction is isolated
+    //  so we'll never make progress.
+    // So we use another trick: if any child of a node has a score of +1 (from the perspective of the node) then that node must have a score of +1,
+    // since no other child can have a higher score. 
+    // There are probably still dragons lurking in here... but hopefully they are rare ¯\_(ツ)_/¯
     if curPlayNode.allChildrenAreScored() {
       if err := curPlayNode.updateScore(); err != nil {
         return err
       }
       if DEBUG {
-        fmt.Printf("Scored loop node: %s", curPlayNode.toString())
+        fmt.Printf("Scored loop node: %+v\n", curPlayNode)
+      }
+      enqueueLoopParents(nodesToScore, curLoopNode)
+    } else if maxChildScoreCurPlayer := curPlayNode.maxChildScoreForPlayer(); maxChildScoreCurPlayer > 0.9 {
+      curPlayNode.score = turnToSign(curPlayNode.gs.turn) * maxChildScoreCurPlayer
+      curPlayNode.isScored = true
+      if DEBUG {
+        fmt.Printf("Scored loop node based on max child score: %+v\n", curPlayNode)
       }
       enqueueLoopParents(nodesToScore, curLoopNode)
     }
+
   }
   // Step four: go over the loop one last time and give all unscored nodes a heuristic score - they're stuck in an
-  // infinite loop
+  // infinite loop or are otherwised borked somehow.
   scoreInfiniteLoops(lg)
-  // At this point, all nodes in the loop should be scored.
+  // At this point, all nodes in the loop should be scored (though perhaps not optimally)
   return nil
 }
 
@@ -364,7 +378,7 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
   // We're done if the scorable frontier is empty and all loops have been scored, so we're not done if either 
   // there are nodes on the frontier, or there are unscored loop graphs
   for loopCount := 0; !scorableFrontier.isEmpty() || len(unscoredLoopGraphs) > 0; loopCount++ {
-    if loopCount > 100 {
+    if loopCount > 2 {
       return errors.New("maxLoopCount exceeded in scoring iteration, frontier: %s" + scorableFrontier.toString(playNodeToString))
     }
     if DEBUG {
