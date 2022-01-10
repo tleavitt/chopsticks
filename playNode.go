@@ -214,7 +214,7 @@ func (node *playNode) getHeuristicScore() float32 {
   } else {
     if p2Heuristic == -1 {
       // p1 wins, return +1
-      p1Heuristic = 1
+      return 1
     } else {
       // Don't modify the heuristics at all.
     }
