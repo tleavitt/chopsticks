@@ -378,7 +378,7 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bo
   // We're done if the scorable frontier is empty and all loops have been scored, so we're not done if either 
   // there are nodes on the frontier, or there are unscored loop graphs
   for loopCount := 0; !scorableFrontier.isEmpty() || len(unscoredLoopGraphs) > 0; loopCount++ {
-    if loopCount > 2 {
+    if loopCount > 100 {
       return errors.New("maxLoopCount exceeded in scoring iteration, frontier: %s" + scorableFrontier.toString(playNodeToString))
     }
     if DEBUG {

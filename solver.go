@@ -4,7 +4,7 @@ import (
   "fmt"
 )
 
-const DEFAULT_MAX_DEPTH int = 15
+const DEFAULT_MAX_DEPTH int = 25
 
 // Generate a play strategy given a starting game state. 
 func solve(gs *gameState) (*playNode, map[gameState]*playNode, map[gameState]*playNode, map[*loopGraph]bool, error) {

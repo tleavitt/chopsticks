@@ -5,9 +5,7 @@ import (
   "testing"
 )
 
-func TestSolveTreeValid(t *testing.T) {
-  fmt.Println("starting TestSolveTreeValid")
-  prevNumFingers := setNumFingers(3)
+func testSolveTreeValid(t *testing.T) {
   startState := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }
@@ -17,8 +15,30 @@ func TestSolveTreeValid(t *testing.T) {
     t.Fatal(solveErr.Error())
   } 
   validateSolveNode(gps, stateNode, make(map[gameState]bool, len(existingStates)), existingStates, leaves, t)
+}
+
+func TestSolveTreeValid3(t *testing.T) {
+  fmt.Println("starting TestSolveTreeValid3")
+  prevNumFingers := setNumFingers(3)
+  testSolveTreeValid(t)
   setNumFingers(prevNumFingers)
-  fmt.Println("finished TestSolveTreeValid")
+  fmt.Println("finished TestSolveTreeValid3")
+}
+
+func TestSolveTreeValid4(t *testing.T) {
+  fmt.Println("starting TestSolveTreeValid4")
+  prevNumFingers := setNumFingers(4)
+  testSolveTreeValid(t)
+  setNumFingers(prevNumFingers)
+  fmt.Println("finished TestSolveTreeValid4")
+}
+
+func TestSolveTreeValid5(t *testing.T) {
+  fmt.Println("starting TestSolveTreeValid5")
+  prevNumFingers := setNumFingers(5)
+  testSolveTreeValid(t)
+  setNumFingers(prevNumFingers)
+  fmt.Println("finished TestSolveTreeValid5")
 }
 
 func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gameState]bool, 
