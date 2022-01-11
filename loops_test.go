@@ -111,3 +111,99 @@ func TestLoopsInterlinked(t *testing.T) {
 
   fmt.Println("finished TestLoopsInterlinked")
 }
+
+func TestLoopsMutualExits(t *testing.T) {
+  fmt.Println("starting TestLoopsMutualExits")
+  gs := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
+
+  pn11 := createPlayNodeCopyGs(gs)
+  pn12 := createPlayNodeCopyGs(gs)
+  pn13 := createPlayNodeCopyGs(gs)
+  pn14 := createPlayNodeCopyGs(&gameState{player{1, 4,}, player{1, 4,}, Player1,})
+
+  pn21 := createPlayNodeCopyGs(gs)
+  pn22 := createPlayNodeCopyGs(&gameState{player{2, 2,}, player{2, 2,}, Player1,})
+  pn23 := createPlayNodeCopyGs(gs)
+  pn24 := createPlayNodeCopyGs(gs)
+
+  // True exits
+  exit1 := createPlayNodeCopyGs(gs)
+  exit2 := createPlayNodeCopyGs(gs)
+
+  // Wire everything up
+  addParentChildEdges(pn11, pn12, move{Right, Left}) 
+  addParentChildEdges(pn12, pn13, move{Right, Left}) 
+  addParentChildEdges(pn13, pn14, move{Right, Left}) 
+  addParentChildEdges(pn14, pn11, move{Right, Left}) 
+
+  addParentChildEdges(pn21, pn22, move{Right, Left}) 
+  addParentChildEdges(pn22, pn23, move{Right, Left}) 
+  addParentChildEdges(pn23, pn24, move{Right, Left}) 
+  addParentChildEdges(pn24, pn21, move{Right, Left}) 
+
+
+  // p11 exits to p22,
+  addParentChildEdges(pn11, pn22, move{Left, Left}) 
+  // p23 points to p14
+  addParentChildEdges(pn23, pn14, move{Left, Left}) 
+
+  // p12 exits to exit1:
+  addParentChildEdges(pn12, exit1, move{Left, Left})
+  // p23 also exits to exit2:
+  addParentChildEdges(pn23, exit2, move{Left, Right})
+
+
+  loops := [][]*playNode{
+    []*playNode{pn11, pn12, pn13, pn14},
+    []*playNode{pn21, pn22, pn23, pn24},
+  } 
+
+  fmt.Println(len(loops))
+
+  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  if len(distinctLoopGraphs) != 2 {
+    t.Fatal("Unexpected number of loops")
+  }
+  loopsToExitNodes := getExitAllExitNodes(distinctLoopGraphs)
+  fmt.Printf("loops to exit nodes: %+v\n", loopsToExitNodes)
+  mergedLoops, err := mergeMutualExits(loopsToExitNodes)
+  if err != nil {
+    t.Fatal(err.Error())
+  }
+  if len(mergedLoops) != 1 {
+    t.Fatal("Did not merge mutual exit loop")
+  }
+  var lg *loopGraph
+  var exitNodes map[*playNode]bool
+  for l, e := range mergedLoops {
+    lg, exitNodes = l, e
+  }
+
+  if len(exitNodes) != 2 {
+    t.Fatalf("Unexpected number of exit nodes %d", len(exitNodes))
+  }
+
+  // Everyone should be in a single loop:
+  for _, pn := range []*playNode{pn11, pn12, pn13, pn14, pn21, pn22, pn23, pn24} {
+    if pn.ln == nil || pn.ln.lg != lg {
+      t.Fatalf("Node %s is not in loop graph %p", pn.toString(), lg)
+    }
+  }
+
+  // Both exit nodes should be present
+  for _, e := range []*playNode{exit1, exit2} {
+    if !exitNodes[e] {
+      t.Fatalf("Node %s is not an exit node", e.toString())
+    }
+  }
+
+  // pn11 and pn23 should have two out edges on their loop nodes.
+  if len(pn11.ln.nextNodes) != 2 {
+    t.Fatalf("pn11 has unexpected number of next nodes: %+v", pn11.ln)
+  }
+  if len(pn23.ln.nextNodes) != 2 {
+    t.Fatalf("pn23 has unexpected number of next nodes: %+v", pn23.ln)
+  }
+
+  fmt.Println("finished TestLoopsMutualExits")
+}
