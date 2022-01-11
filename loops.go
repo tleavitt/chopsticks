@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "errors"
+  "log"
 )
 
 // Node for the loop metagraphs on top of the playNode graph
@@ -66,13 +67,14 @@ func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
     setNewLoopGraphForAll(nextLn, newLg)
   } 
   // Go UP the tree as well, in case we start in the middle somewhere (should this matter at all?)
-  for prevLn, _ := range ln.prevNodes {
-    setNewLoopGraphForAll(prevLn, newLg)
-  } 
+  // for prevLn, _ := range ln.prevNodes {
+  //   setNewLoopGraphForAll(prevLn, newLg)
+  // } 
 }
 
 // Create a set of loop graphs for the given loops.
-// OK my loop code is clearly broken
+// OK my loop code is clearly broken, giving me non-deterministic counts of exit nodes....
+// or maybe it's just the number of exit nodes that's broken??
 func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   fmt.Printf("CreateDistinctLoopGraphs: %+v\n", loops)
   loopGraphs := make(map[*loopGraph]bool, len(loops))
@@ -190,16 +192,19 @@ func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[
 // are not themselves in the same loop. (They could be in a different loop or be normal nodes.)
 func getExitNodes(lg *loopGraph) map[*playNode]bool {
   exitNodes := make(map[*playNode]bool)
-  getExitNodesImpl(lg.head, make(map[*loopNode]bool), exitNodes)
+  getExitNodesImpl(lg.head, lg, make(map[*loopNode]bool), exitNodes)
   return exitNodes
 }
 
-func getExitNodesImpl(ln *loopNode, visitedNodes map[*loopNode]bool, exitNodes map[*playNode]bool) {
+func getExitNodesImpl(ln *loopNode, lg *loopGraph, visitedNodes map[*loopNode]bool, exitNodes map[*playNode]bool) {
   // Base case: we've already been here.
   if visitedNodes[ln] {
     return 
   }  
   visitedNodes[ln] = true
+  if ln.lg != lg {
+    log.Fatal("loop node loop graph does not match head graph!")
+  }
   pn := ln.pn
   for _, nextPn := range pn.nextNodes {
     if isExitNode(nextPn, ln.lg) {
@@ -210,12 +215,12 @@ func getExitNodesImpl(ln *loopNode, visitedNodes map[*loopNode]bool, exitNodes m
 
   // DFS on the loop graph
   for nextLn, _ := range ln.nextNodes {
-    getExitNodesImpl(nextLn, visitedNodes, exitNodes)
+    getExitNodesImpl(nextLn, lg, visitedNodes, exitNodes)
   }
   // Go up the graph as well?
-    // DFS on the loop graph
+  // DFS on the loop graph
   for prevLn, _ := range ln.prevNodes {
-    getExitNodesImpl(prevLn, visitedNodes, exitNodes)
+    getExitNodesImpl(prevLn, lg, visitedNodes, exitNodes)
   }
 }
 
