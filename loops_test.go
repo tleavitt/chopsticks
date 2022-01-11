@@ -112,8 +112,8 @@ func TestLoopsInterlinked(t *testing.T) {
   fmt.Println("finished TestLoopsInterlinked")
 }
 
-func TestLoopsMutualExits(t *testing.T) {
-  fmt.Println("starting TestLoopsMutualExits")
+func TestLoopsMutualExits1(t *testing.T) {
+  fmt.Println("starting TestLoopsMutualExits1")
   gs := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
 
   pn11 := createPlayNodeCopyGs(gs)
@@ -158,8 +158,6 @@ func TestLoopsMutualExits(t *testing.T) {
     []*playNode{pn21, pn22, pn23, pn24},
   } 
 
-  fmt.Println(len(loops))
-
   distinctLoopGraphs := createDistinctLoopGraphs(loops) 
   if len(distinctLoopGraphs) != 2 {
     t.Fatal("Unexpected number of loops")
@@ -194,6 +192,124 @@ func TestLoopsMutualExits(t *testing.T) {
   for _, e := range []*playNode{exit1, exit2} {
     if !exitNodes[e] {
       t.Fatalf("Node %s is not an exit node", e.toString())
+    }
+  }
+
+  // pn11 and pn23 should have two out edges on their loop nodes.
+  if len(pn11.ln.nextNodes) != 2 {
+    t.Fatalf("pn11 has unexpected number of next nodes: %+v", pn11.ln)
+  }
+  if len(pn23.ln.nextNodes) != 2 {
+    t.Fatalf("pn23 has unexpected number of next nodes: %+v", pn23.ln)
+  }
+
+  fmt.Println("finished TestLoopsMutualExits1")
+}
+
+func TestLoopsMutualExits2(t *testing.T) {
+  fmt.Println("starting TestLoopsMutualExits2")
+  gs := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
+
+  pn11 := createPlayNodeCopyGs(gs)
+  pn12 := createPlayNodeCopyGs(gs)
+  pn13 := createPlayNodeCopyGs(gs)
+  pn14 := createPlayNodeCopyGs(&gameState{player{1, 4,}, player{1, 4,}, Player1,})
+
+  pn21 := createPlayNodeCopyGs(gs)
+  pn22 := createPlayNodeCopyGs(&gameState{player{2, 2,}, player{2, 2,}, Player1,})
+  pn23 := createPlayNodeCopyGs(gs)
+  pn24 := createPlayNodeCopyGs(gs)
+
+  // Third loop has individual exits to each but not mutual exits.
+  pn31 := createPlayNodeCopyGs(gs)
+  pn32 := createPlayNodeCopyGs(&gameState{player{3, 2,}, player{3, 2,}, Player1,})
+  pn33 := createPlayNodeCopyGs(&gameState{player{3, 3,}, player{3, 3,}, Player1,})
+  pn34 := createPlayNodeCopyGs(gs)
+
+  // Add an entry just because
+  entry := createPlayNodeCopyGs(gs)
+
+  // True exits
+  exit1 := createPlayNodeCopyGs(gs)
+  exit2 := createPlayNodeCopyGs(gs)
+
+  // Wire everything up
+  addParentChildEdges(entry, pn11, move{Right, Left}) 
+  addParentChildEdges(pn11, pn12, move{Right, Left}) 
+  addParentChildEdges(pn12, pn13, move{Right, Left}) 
+  addParentChildEdges(pn13, pn14, move{Right, Left}) 
+  addParentChildEdges(pn14, pn11, move{Right, Left}) 
+
+  addParentChildEdges(pn21, pn22, move{Right, Left}) 
+  addParentChildEdges(pn22, pn23, move{Right, Left}) 
+  addParentChildEdges(pn23, pn24, move{Right, Left}) 
+  addParentChildEdges(pn24, pn21, move{Right, Left}) 
+
+  addParentChildEdges(pn31, pn32, move{Right, Left}) 
+  addParentChildEdges(pn32, pn33, move{Right, Left}) 
+  addParentChildEdges(pn33, pn34, move{Right, Left}) 
+  addParentChildEdges(pn34, pn31, move{Right, Left}) 
+
+  // p11 exits to p22,
+  addParentChildEdges(pn11, pn22, move{Left, Left}) 
+  // p23 points to p14
+  addParentChildEdges(pn23, pn14, move{Left, Left}) 
+
+  // p12 exits to exit1:
+  addParentChildEdges(pn12, exit1, move{Left, Left})
+  // p23 also exits to exit2:
+  addParentChildEdges(pn23, exit2, move{Left, Right})
+
+  // p32 exits to p11
+  addParentChildEdges(pn32, pn11, move{Left, Left})
+  // p33 exits to p22
+  addParentChildEdges(pn33, pn22, move{Left, Left})
+
+
+  loops := [][]*playNode{
+    []*playNode{pn11, pn12, pn13, pn14},
+    []*playNode{pn21, pn22, pn23, pn24},
+    []*playNode{pn31, pn32, pn33, pn34},
+  } 
+
+  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  if len(distinctLoopGraphs) != 3 {
+    t.Fatal("Unexpected number of loops")
+  }
+  loopsToExitNodes := getExitAllExitNodes(distinctLoopGraphs)
+  fmt.Printf("loops to exit nodes: %+v\n", loopsToExitNodes)
+  mergedLoops, err := mergeMutualExits(loopsToExitNodes)
+  if err != nil {
+    t.Fatal(err.Error())
+  }
+  if len(mergedLoops) != 2 {
+    t.Fatal("Did not merge mutual exit loop")
+  }
+
+  // First two loops should be merged:
+  lg := pn11.ln.lg
+  for _, pn := range []*playNode{pn11, pn12, pn13, pn14, pn21, pn22, pn23, pn24} {
+    if pn.ln == nil || pn.ln.lg != lg {
+      t.Fatalf("Node %s is not in loop graph %p", pn.toString(), lg)
+    }
+  }
+  if lg == pn31.ln.lg {
+    t.Fatal("Third loop has same loop graph as first")
+  }
+
+  // Check exits of first loop
+  exitNodes1 := mergedLoops[lg]
+  for _, e := range []*playNode{exit1, exit2} {
+    if !exitNodes1[e] {
+      t.Fatalf("Node %s is not an exit node of the first loop", e.toString())
+    }
+  }
+
+  // Check exits of second loop (they should still be there)
+  exitNodes3 := mergedLoops[pn31.ln.lg]
+  for _, e := range []*playNode{pn11, pn22} {
+    if !exitNodes3[e] {
+      t.Fatalf("Node %s is not an exit node of the third loop", e.toString())
     }
   }
 
