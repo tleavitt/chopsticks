@@ -2,6 +2,7 @@ package main
 
 import (
   "fmt"
+  "errors"
 )
 
 const DEFAULT_MAX_DEPTH int = 25
@@ -18,14 +19,32 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
     fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves, %d loops)", len(visitedStates), len(leaves), len(loops)))
   }
 
-  // Step two: build loop graphs
+  // Step two: build loop graphs, find exit nodes, and merge when encessary
   loopGraphs := createDistinctLoopGraphs(loops)
+  loopGraphsToExitNodes := getExitAllExitNodes(loopGraphs)
+  initialNumLg := len(loopGraphsToExitNodes)
+  // Need to iteratively merge loops until no more loops can be merged, since the loop edges can change after each merge.
+  for it := 0; ;it++ {
+    // Safety belt
+    if it > 100 {
+      return nil, nil, nil, nil, errors.New("too many merge loop iterations")
+    }
+    prevNumLoop := len(loopGraphsToExitNodes)
+    var err error = nil;
+    if loopGraphsToExitNodes, err = mergeMutualExits(loopGraphsToExitNodes); err != nil {
+      return nil, nil, nil, nil, err
+    }
+    if prevNumLoop == len(loopGraphsToExitNodes) {
+      break
+    }
+  }
+
   if INFO {
-    fmt.Println(fmt.Sprintf("Created %d loop graphs from %d loops", len(loopGraphs), len(loops)))
+    fmt.Println(fmt.Sprintf("Created %d consolidated loop graphs from %d unmerged loop graphs (%d loops)", len(loopGraphsToExitNodes), initialNumLg, len(loops)))
   }
 
   // Step three: propagate scores
-  if err := scorePlayGraph(leaves, loopGraphs); err != nil {
+  if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
     return nil, nil, nil, nil, err
   }
   if INFO {

@@ -198,6 +198,19 @@ func getExitNodesImpl(ln *loopNode, visitedNodes map[*loopNode]bool, exitNodes m
   }
 }
 
+// Copies the loops-to-exit-nodes map (copying map values but not pointer values)
+func copyLoopsToExitNodes(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[*loopGraph]map[*playNode]bool {
+  newLtE := make(map[*loopGraph]map[*playNode]bool, len(loopsToExitNodes)) 
+  for lg, exitNodes := range loopsToExitNodes {
+    newE := make(map[*playNode]bool, len(exitNodes))
+    for e, _ := range exitNodes {
+      newE[e] = true
+    }
+    newLtE[lg] = newE
+  }
+  return newLtE
+}
+
 
 //===========================================================
 //============ Mutual Exit Node Handlers ====================
@@ -246,16 +259,13 @@ type mergeableExitNode struct {
 func findMergeableExitNodes(exitNodes1  map[*playNode]bool, normalExitNodes map[*playNode]bool, lg1 *loopGraph, lg2 *loopGraph) ([]*mergeableExitNode, error) {
   exitNodes1In2 := []*mergeableExitNode{}
   for exitNode, _ := range exitNodes1 {
-    fmt.Printf("checking if exit node %s is in loop graph %p\n", exitNode.toString(), lg2)
     if exitNode.ln != nil && exitNode.ln.lg == lg2 {
       parentsIn1 := findParentsInGraph(exitNode, lg1)
       if len(parentsIn1) == 0 {
         return nil, errors.New(fmt.Sprintf("Exit node does not have parents in graph: %+v, %p", exitNode, lg1))
       }
       exitNodes1In2 = append(exitNodes1In2, &mergeableExitNode{ exitNode.ln, parentsIn1, })
-      fmt.Printf("added to output: %+v\n", exitNodes1In2)
     } else {
-      fmt.Printf("not adding to output: %+v\n", exitNode)
       normalExitNodes[exitNode] = true
     }
   }
@@ -264,7 +274,9 @@ func findMergeableExitNodes(exitNodes1  map[*playNode]bool, normalExitNodes map[
 
 
 func mergeExitNodes(exitNodesToMerge []*mergeableExitNode, lg *loopGraph) error {
-  fmt.Printf("exitNodesToMerge: %+v\n", exitNodesToMerge)
+  if DEBUG {
+    fmt.Printf("exitNodesToMerge: %+v\n", exitNodesToMerge)
+  }
   for _, m := range exitNodesToMerge {
     exitNode := m.exitNode
     // Sanity check: exit node should be a part of the loop graph
@@ -343,10 +355,6 @@ func mergeMutualExits(loopGraphsToExits map[*loopGraph]map[*playNode]bool) (map[
       // Check if any exit nodes of 1 are in 2.
       exit1In2 := someExitNodeIsInGraph(exitNodes1, lg2)
       exit2In1 := someExitNodeIsInGraph(exitNodes2, lg1)
-      if DEBUG {
-        fmt.Printf("exitNodes1: %+v, exitNodes2: %+v, exit1In2: %t, exit2In1: %t, mutualExits: %+v\n",
-          exitNodes1, exitNodes2, exit1In2, exit2In1, mutualExits)
-      }
       // If we have BOTH, we have a pair of mutual exits
       if exit1In2 && exit2In1 {
         // Update our mutual exits list:
@@ -395,9 +403,6 @@ func mergeMutualExits(loopGraphsToExits map[*loopGraph]map[*playNode]bool) (map[
     // Final step: remove all the merged graphs from our mutual exits map.
     for _, lg := range curMutualExits {
       delete(mutualExits, lg)
-    }
-    if DEBUG {
-      fmt.Printf("After delete step: mutualExitsGraphs: %+v, mutualExits: %+v\n", curMutualExits, mutualExits)
     }
   }
 

@@ -369,7 +369,7 @@ func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGr
   return nil
 }
 
-func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]bool) map[*loopGraph]bool {
+func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]map[*playNode]bool) map[*loopGraph]bool {
   unscoredLoopGraphs := make(map[*loopGraph]bool, len(loopGraphs))
   for lg, _ := range loopGraphs {
     unscoredLoopGraphs[lg] = true
@@ -377,10 +377,10 @@ func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]bool) map[*loopGraph]b
   return unscoredLoopGraphs
 }
 
-func scorePlayGraph(leaves map[gameState]*playNode, loopGraphs map[*loopGraph]bool) error {
+func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGraph]map[*playNode]bool) error {
   // Compute the exit nodes; this map maintains all unscored exit nodes of a loop
-  loopsToUnscoredExitNodes := getExitAllExitNodes(loopGraphs)
-  unscoredLoopGraphs := createUnscoredLoopGraphMap(loopGraphs)
+  loopsToUnscoredExitNodes := copyLoopsToExitNodes(loopsToExitNodes)
+  unscoredLoopGraphs := createUnscoredLoopGraphMap(loopsToExitNodes)
   // Need the inverse map too:
   exitNodesToLoopGraph := invertExitNodesMap(loopsToUnscoredExitNodes) 
   // Keep a running set of nodes that can (definitely?) be scored(?)
