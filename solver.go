@@ -22,25 +22,9 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
   // Step two: build loop graphs, find exit nodes, and merge when encessary
   loopGraphs := createDistinctLoopGraphs(loops)
   loopGraphsToExitNodes := getExitAllExitNodes(loopGraphs)
-  initialNumLg := len(loopGraphsToExitNodes)
-  // Need to iteratively merge loops until no more loops can be merged, since the loop edges can change after each merge.
-  for it := 0; ;it++ {
-    // Safety belt
-    if it > 100 {
-      return nil, nil, nil, nil, errors.New("too many merge loop iterations")
-    }
-    prevNumLoop := len(loopGraphsToExitNodes)
-    var err error = nil;
-    if loopGraphsToExitNodes, err = mergeMutualExits(loopGraphsToExitNodes); err != nil {
-      return nil, nil, nil, nil, err
-    }
-    if prevNumLoop == len(loopGraphsToExitNodes) {
-      break
-    }
-  }
 
   if INFO {
-    fmt.Printf("Created %d consolidated loop graphs from %d unmerged loop graphs (%d loops)\n", len(loopGraphsToExitNodes), initialNumLg, len(loops))
+    fmt.Printf("Created %d loops\n",len(loops))
     for lg, exitNodes := range loopGraphsToExitNodes {
       fmt.Printf("== loop graph: %p = %+v, num exit nodes: %d\n", lg, lg, len(exitNodes))
     }

@@ -93,6 +93,9 @@ func createLoopGraphs(loops [][]*playNode) map[*loopGraph]int {
       // Iteration update
       prevLoopNode = curLoopNode
     } 
+    if curLoopGraph.size != len(loop) {
+     log.Fatal("loop graph size does not match loop size")
+   }
   }
 
   return loopGraphs
@@ -103,22 +106,16 @@ func createLoopGraphs(loops [][]*playNode) map[*loopGraph]int {
 //============================================
 
 // Transforms a set of loop graphs into a map from loop graphs to their exit nodes
-func getExitAllExitNodes(loopGraphs map[*loopGraph]bool) map[*loopGraph]map[*playNode]bool {
-  graphsToExitNodes := make(map[*loopGraph]map[*playNode]bool, len(loopGraphs))
-  for lg, _ := range loopGraphs {
-    graphsToExitNodes[lg] = getExitNodes(lg)
+// TODO: need int as keys to exit nodes?
+func getExitAllExitNodes(loopGraphs map[*loopGraph]int, loops [][]*playNode) map[*loopGraph]map[*playNode]int {
+  graphsToExitNodes := make(map[*loopGraph]map[*playNode]int, len(loopGraphs))
+  for lg, loopIdx := range loopGraphs {
+    graphsToExitNodes[lg] = getExitNodes(lg, loops[loopIdx], loopIdx)
   }
   return graphsToExitNodes
 }
 
-func getFirstLoopGraph(loopGraphs map[*loopGraph]bool) *loopGraph {
-  for lg, _ := range loopGraphs {
-    return lg
-  }
-  return nil
-}
-
-func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[*playNode][]*loopGraph {
+func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]int) map[*playNode][]*loopGraph {
   exitNodesToLoopGraph := make(map[*playNode][]*loopGraph, len(loopsToExitNodes)) // underestimates size
   for lg, exitNodes := range loopsToExitNodes {
     for exitNode, _ := range exitNodes {
@@ -142,8 +139,8 @@ func invertExitNodesMap(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[
 
 // Get the exit nodes of the loop. Exit nodes are children of loop members that
 // are not themselves in the same loop. (They could be in a different loop or be normal nodes.)
-func getExitNodes(lg *loopGraph, loop []*playNode) map[*playNode]bool {
-  exitNodes := make(map[*playNode]bool)
+func getExitNodes(lg *loopGraph, loop []*playNode, loopIdx int) map[*playNode]int {
+  exitNodes := make(map[*playNode]int)
   for _, pn := range loop {
     if !playNodeIsInLoop(pn, lg) {
       log.Fatal("loop node loop graph does not match head graph!")
@@ -151,17 +148,17 @@ func getExitNodes(lg *loopGraph, loop []*playNode) map[*playNode]bool {
     for _, nextPn := range pn.nextNodes {
       if isExitNode(nextPn) {
         // Found an exit node, add it to our set
-        exitNodes[nextPn] = true
+        exitNodes[nextPn] = loopIdx
       }
     }
   }
   return exitNodes
 }
 // Copies the loops-to-exit-nodes map (copying map values but not pointer values)
-func copyLoopsToExitNodes(loopsToExitNodes map[*loopGraph]map[*playNode]bool) map[*loopGraph]map[*playNode]bool {
-  newLtE := make(map[*loopGraph]map[*playNode]bool, len(loopsToExitNodes)) 
+func copyLoopsToExitNodes(loopsToExitNodes map[*loopGraph]map[*playNode]int) map[*loopGraph]map[*playNode]int {
+  newLtE := make(map[*loopGraph]map[*playNode]int, len(loopsToExitNodes)) 
   for lg, exitNodes := range loopsToExitNodes {
-    newE := make(map[*playNode]bool, len(exitNodes))
+    newE := make(map[*playNode]int, len(exitNodes))
     for e, _ := range exitNodes {
       newE[e] = true
     }

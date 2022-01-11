@@ -260,7 +260,7 @@ func (node *playNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   var sb strings.Builder
   buf := strings.Repeat(" ", curDepth)
   sb.WriteString(buf)
-  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f, isScored:%t prevNodes:%+v ln: %v ", node.gs.toString(), node.score, node.isScored, node.prevNodes, node.ln)) 
+  sb.WriteString(fmt.Sprintf("playNode{gs:%s score:%f, isScored:%t prevNodes:%+v lns: %v ", node.gs.toString(), node.score, node.isScored, node.prevNodes, node.lns)) 
   printedStates[*node.gs] = true
   if len(node.nextNodes) == 0 {
     sb.WriteString("leafNode}")

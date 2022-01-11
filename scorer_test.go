@@ -48,7 +48,7 @@ func TestScorePropagateScores(t *testing.T) {
   // Score
   leaves := make(map[gameState]*playNode, 1)
   leaves[*sonNode.gs] = sonNode
-  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]bool)); err != nil {
+  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]int)); err != nil {
     t.Fatal(err.Error())
   }
 
@@ -91,7 +91,7 @@ func TestScorePropagateScoresFork(t *testing.T) {
   leaves := make(map[gameState]*playNode, 1)
   leaves[*three.gs] = three
   // Should require exactly two nodes on the frontier (two and two prime)
-  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]bool)); err != nil {
+  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]int)); err != nil {
     t.Fatal(err.Error())
   }
 
