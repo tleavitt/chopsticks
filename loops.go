@@ -13,9 +13,10 @@ type loopNode struct {
   prevNodes map[*loopNode]bool // The previous node (or nodes) in this loop graph. For simple loops this has just one element.
 }
 
-// Loop graphs are simply a pointer to the head loop node
+// Loop graphs are simply a pointer to the head loop node and a size (for reference)
 type loopGraph struct {
   head *loopNode
+  size int
 };
 
 // Returns true if the given play node is an exit node of the given loop graph.
@@ -43,11 +44,12 @@ func createAndSetupLoopNode(pn *playNode, lg *loopGraph) *loopNode {
     pn, lg, make(map[*loopNode]bool, 1), make(map[*loopNode]bool, 1),
   }
   pn.ln = ln
+  lg.size++
   return ln
 }
 
 func createEmptyLoopGraph() *loopGraph {
-  return &loopGraph{nil,}
+  return &loopGraph{nil,0,}
 }
 
 func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
@@ -55,13 +57,22 @@ func setNewLoopGraphForAll(ln *loopNode, newLg *loopGraph) {
   if ln.lg == newLg {
     return
   }
+  // Update loop graph sizea
+  ln.lg.size--
   ln.lg = newLg
+  newLg.size++
+
   for nextLn, _ := range ln.nextNodes {
     setNewLoopGraphForAll(nextLn, newLg)
+  } 
+  // Go UP the tree as well, in case we start in the middle somewhere (should this matter at all?)
+  for prevLn, _ := range ln.prevNodes {
+    setNewLoopGraphForAll(prevLn, newLg)
   } 
 }
 
 // Create a set of loop graphs for the given loops.
+// OK my loop code is clearly broken
 func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
   fmt.Printf("CreateDistinctLoopGraphs: %+v\n", loops)
   loopGraphs := make(map[*loopGraph]bool, len(loops))
@@ -89,6 +100,9 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
           if head := curLoopGraph.head; head != nil {
             setNewLoopGraphForAll(head, existingLoopGraph)
           }
+          if curLoopGraph.size != 0 {
+            fmt.Println("WARNING!!! curLoopGraph does not have zero size after updating")
+          }
 
           // Update the curLoopGraph for future iterations
           curLoopGraph = existingLoopGraph
@@ -100,12 +114,14 @@ func createDistinctLoopGraphs(loops [][]*playNode) map[*loopGraph]bool {
         curLoopNode = pn.ln
       } else {
         curLoopNode = createAndSetupLoopNode(pn, curLoopGraph)
+        if curLoopGraph.head == nil {
+          // First node in the loop, make it the head
+          curLoopGraph.head = curLoopNode
+        }
       }
 
-      if it == 0 {
-        // First node in the loop, make it the head
-        curLoopGraph.head = curLoopNode
-      } else {
+      // If we have a previous node to keep track of, add the loop edges now.
+      if prevLoopNode != nil { 
         addForwardBackwardEdges(prevLoopNode, curLoopNode)
       }
       // Last node, add the edges back to the loop head
@@ -195,6 +211,11 @@ func getExitNodesImpl(ln *loopNode, visitedNodes map[*loopNode]bool, exitNodes m
   // DFS on the loop graph
   for nextLn, _ := range ln.nextNodes {
     getExitNodesImpl(nextLn, visitedNodes, exitNodes)
+  }
+  // Go up the graph as well?
+    // DFS on the loop graph
+  for prevLn, _ := range ln.prevNodes {
+    getExitNodesImpl(prevLn, visitedNodes, exitNodes)
   }
 }
 
@@ -296,6 +317,10 @@ func mergeExitNodes(exitNodesToMerge []*mergeableExitNode, lg *loopGraph) error 
 }
 
 func mergeGraphs(lg1 *loopGraph, lg2 *loopGraph, exitNodes1 map[*playNode]bool, exitNodes2 map[*playNode]bool) (*loopGraph, map[*playNode]bool, error) {
+  // lg1 is the one that survives, for simplicity make it the bigger graph.
+  if lg2.size > lg1.size {
+    lg1, lg2 = lg2, lg1
+  }
   // Step 1: Split the exit nodes into three groups: 
   // output exit nodes: normal exit nodes of either lg1 or lg2 
   // exitnodes from lg1 that are in lg2
@@ -397,9 +422,6 @@ func mergeMutualExits(loopGraphsToExits map[*loopGraph]map[*playNode]bool) (map[
     }
     // Save our results
     resultLoopGraphs[lg] = exitNodes
-    if DEBUG {
-      fmt.Printf("Result loop graphs: %+v, mutualExitsGraphs: %+v, mutualExits: %+v\n", resultLoopGraphs, curMutualExits, mutualExits)
-    }
     // Final step: remove all the merged graphs from our mutual exits map.
     for _, lg := range curMutualExits {
       delete(mutualExits, lg)

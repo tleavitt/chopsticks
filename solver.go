@@ -40,13 +40,16 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
   }
 
   if INFO {
-    fmt.Println(fmt.Sprintf("Created %d consolidated loop graphs from %d unmerged loop graphs (%d loops)", len(loopGraphsToExitNodes), initialNumLg, len(loops)))
+    fmt.Printf("Created %d consolidated loop graphs from %d unmerged loop graphs (%d loops)\n", len(loopGraphsToExitNodes), initialNumLg, len(loops))
+    for lg, exitNodes := range loopGraphsToExitNodes {
+      fmt.Printf("== loop graph: %p = %+v, num exit nodes: %d\n", lg, lg, len(exitNodes))
+    }
   }
 
   // Step three: propagate scores
-  if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
-    return nil, nil, nil, nil, err
-  }
+  // if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
+  //   return nil, nil, nil, nil, err
+  // }
   if INFO {
     fmt.Println(fmt.Sprintf("Root score: %f", root.score))
   }
