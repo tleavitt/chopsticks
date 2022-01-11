@@ -44,9 +44,9 @@ type playNode struct {
   prevNodes map[gameState]*playNode
   // Whether or not the score of this node has been computed. Needed for score propagation
   isScored bool
-  // Pointer to the loop node for this play node. Will be nil if not part of a loop.
+  // Pointer to the loop node(s) for this play node. Will be empty if not part of a loop.
   // TODO: should this be a global map instead?
-  ln *loopNode
+  lns []*loopNode
 }
 
 // Go needs generics dammit
@@ -71,15 +71,15 @@ func nodeStateMapToString(nodeMap map[gameState]*playNode) string {
 }
 
 // Construction
-// ALWAYS copies the gamestate (I think??)
+// ALWAYS copies the gamestate
 func createPlayNodeCopyGs(gs *gameState) *playNode {
-  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[gameState]*playNode), false, nil} 
+  node := &playNode{gs.copyAndNormalize(), 0, make(map[move]*playNode), make(map[gameState]*playNode), false, []*loopNode{}} 
   return node
 }
 
-// REUSES the gamestate, AND MUTATES THE ARGUMENT (I think??)
+// REUSES the gamestate, AND MUTATES THE ARGUMENT
 func createPlayNodeReuseGs(gs *gameState) *playNode {
-  node := &playNode{gs, 0, make(map[move]*playNode), make(map[gameState]*playNode), false, nil} 
+  node := &playNode{gs, 0, make(map[move]*playNode), make(map[gameState]*playNode), false, []*loopNode{}} 
   // MUTATES THE ARGUMENT
   node.gs.normalize()
   return node
