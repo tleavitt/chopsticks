@@ -53,13 +53,9 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
   bestPlayer1 := initBestNode()
   bestPlayer2 := initBestNode()
 
-  visitedNodes := make(map[*loopNode]bool, 4)
   // Go around the loop
-  enqueueLoopNode(frontier, lg.head)
 
   for i, curNode := 0, lg.head; i < lg.size; i, curNode = i+1, curNode.nextNode {
-    curNode, err := dequeueLoopNode(frontier)
-
     // Invariant: the current node should be part of the loop graph:
     if curNode.lg != lg {
       return nil, nil, errors.New(fmt.Sprintf("Node in loop graph does not point to lg: %+v, lg: %p", curNode, lg))
@@ -179,6 +175,7 @@ func scoreLoop(lg *loopGraph) error {
         if DEBUG {
           fmt.Printf("Scored loop node based on max child score: %+v\n", curPlayNode)
         }
+      }
     }
 
     // Always move on to the next node in the loop.
@@ -406,7 +403,10 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGr
 
       loopGraphsToScore := getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs, loopsToUnscoredExitNodes)
       for _, lg := range loopGraphsToScore {
-        if err := scoreLoop(lg, scorableFrontier); err != nil {
+        if err := scoreLoop(lg); err != nil {
+          return err
+        }
+        if err := enqueueScorableParentsOfLoop(lg, scorableFrontier, loopsToUnscoredExitNodes, exitNodesToLoopGraph); err != nil {
           return err
         }
       }

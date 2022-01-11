@@ -14,7 +14,7 @@ func TestLoopsSimple(t *testing.T) {
     []*playNode{createPlayNodeCopyGs(gs2), createPlayNodeCopyGs(gs2)},
     []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
   } 
-  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  distinctLoopGraphs := createLoopGraphs(loops) 
   for lg, _ := range distinctLoopGraphs {
     var curNode *loopNode
     var i int
@@ -29,12 +29,10 @@ func TestLoopsSimple(t *testing.T) {
         t.Fatalf("Play node pointer is incorrect: %+v", curNode.pn)
       }
       // Update curNode
-      if len(curNode.nextNodes) != 1 {
+      if curNode.nextNode == nil {
         t.Fatalf("Unexpected next nodes: %+v", curNode)
       }
-      for nextNode, _ := range curNode.nextNodes {
-        curNode = nextNode 
-      }
+      curNode = curNode.nextNode 
     }
   }
 
@@ -83,7 +81,7 @@ func TestLoopsInterlinked(t *testing.T) {
 
   fmt.Println(len(loops))
 
-  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  distinctLoopGraphs := createLoopGraphs(loops) 
   if len(distinctLoopGraphs) != 3 {
     t.Fatal("Did not join distinct loops into one")
   }

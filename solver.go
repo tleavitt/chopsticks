@@ -2,13 +2,12 @@ package main
 
 import (
   "fmt"
-  "errors"
 )
 
 const DEFAULT_MAX_DEPTH int = 25
 
 // Generate a play strategy given a starting game state. 
-func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map[gameState]*playNode, map[*loopGraph]bool, error) {
+func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map[gameState]*playNode, map[*loopGraph]int, error) {
   // Step one: explore all possible states, and identify loops
   visitedStates := make(map[gameState]*playNode, 10)
   root, leaves, loops, err := exploreStates(createPlayNodeCopyGs(gs), visitedStates, DEFAULT_MAX_DEPTH)
@@ -20,8 +19,8 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
   }
 
   // Step two: build loop graphs, find exit nodes, and merge when encessary
-  loopGraphs := createDistinctLoopGraphs(loops)
-  loopGraphsToExitNodes := getExitAllExitNodes(loopGraphs)
+  loopGraphs := createLoopGraphs(loops)
+  loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
 
   if INFO {
     fmt.Printf("Created %d loops\n",len(loops))

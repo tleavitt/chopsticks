@@ -24,7 +24,7 @@ func ensureAllNodesScoredImpl(root *playNode, t *testing.T, visitedStates map[ga
   return
 }
 
-func TestScorePropagateScores(t *testing.T) {
+func TestScorePropagateScoresSimple(t *testing.T) {
   fmt.Println("starting TestPropagateScores")
 
   grandpa := &gameState{
@@ -139,8 +139,8 @@ func TestScorePropagateScoresLoop(t *testing.T) {
   loops := [][]*playNode{
     []*playNode{oneNode, twoNode, threeNode, fourNode},
   } 
-  loopGraphs := createDistinctLoopGraphs(loops) 
-  loopGraphsToExitNodes := getExitAllExitNodes(loopGraphs)
+  loopGraphs := createLoopGraphs(loops) 
+  loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
 
   if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
     t.Fatal(err.Error())
@@ -198,8 +198,8 @@ func TestScorePropagateScoresLoop2(t *testing.T) {
   loops := [][]*playNode{
     []*playNode{oneNode, twoNode, threeNode, fourNode},
   } 
-  loopGraphs := createDistinctLoopGraphs(loops) 
-  loopGraphsToExitNodes := getExitAllExitNodes(loopGraphs)
+  loopGraphs := createLoopGraphs(loops) 
+  loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
 
   if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
     t.Fatal(err.Error())
@@ -286,8 +286,8 @@ func TestScorePropagateScoresComplex(t *testing.T) {
   loops := [][]*playNode{
     []*playNode{oneNode, twoNode, threeNode, fourNode},
   } 
-  loopGraphs := createDistinctLoopGraphs(loops) 
-  loopGraphsToExitNodes := getExitAllExitNodes(loopGraphs)
+  loopGraphs := createLoopGraphs(loops) 
+  loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
 
   if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
     t.Fatal(err.Error())
@@ -313,7 +313,7 @@ func TestScoreMostWinningNodesSimple(t *testing.T) {
   fmt.Println("starting TestMostWinningNodesSimple")
   // Note: no exit nodes here.
   loops := createSimpleLoop()
-  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  distinctLoopGraphs := createLoopGraphs(loops) 
 
   if len(distinctLoopGraphs) != 1 {
     t.Fatalf("Unexpected number of loop graphs: %d", len(distinctLoopGraphs))
@@ -337,8 +337,8 @@ func TestScoreSimpleLoop(t *testing.T) {
   fmt.Println("starting TestScoreSimpleLoop")
   // Note: no exit nodes here.
   loops := createSimpleLoop()
-  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
-  loopGraphsToExitNodes := getExitAllExitNodes(distinctLoopGraphs)
+  distinctLoopGraphs := createLoopGraphs(loops) 
+  loopGraphsToExitNodes := getAllExitNodes(distinctLoopGraphs)
   if err := scorePlayGraph(make(map[gameState]*playNode), loopGraphsToExitNodes); err != nil {
     t.Fatal(err.Error())
   }
@@ -440,7 +440,7 @@ func createInterlockedLoops() ([][]*playNode, map[gameState]*playNode) {
 func TestScoreMostWinningNodesInterlinked(t *testing.T) {
   fmt.Println("starting TestMostWinningNodesInterlinked")
   loops, _ := createInterlockedLoops()
-  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  distinctLoopGraphs := createLoopGraphs(loops) 
   if len(distinctLoopGraphs) != 1 {
     t.Fatal("Did not join distinct loops into one")
   }
@@ -467,11 +467,18 @@ func TestScoreMostWinningNodesInterlinked(t *testing.T) {
   fmt.Println("finished TestMostWinningNodesInterlinked")
 }
 
+func getFirstLoopGraph(loopGraphs map[*loopGraph]int) *loopGraph {
+  for lg, _ := range loopGraphs {
+    return lg
+  }
+  return nil
+}
+
 func TestScoreInterlocked(t *testing.T) {
   fmt.Println("starting TestScoreInterlocked")
   // Note: no exit nodes here.
   loops, _ := createInterlockedLoops()
-  distinctLoopGraphs := createDistinctLoopGraphs(loops) 
+  distinctLoopGraphs := createLoopGraphs(loops) 
   lg := getFirstLoopGraph(distinctLoopGraphs)
   if err := scoreLoop(lg); err != nil {
     t.Fatal(err.Error())
