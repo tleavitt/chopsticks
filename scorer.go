@@ -65,7 +65,7 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
     nodesToScore := make(map[move]*playNode, len(curNode.pn.nextNodes))
     for m, nextPn := range curNode.pn.nextNodes {
       // Some exit nodes might not be scored, and that's ok.
-      if isExitNode(nextPn, lg) && nextPn.isScored {
+      if isExitNode(nextPn) && nextPn.isScored {
         nodesToScore[m] = nextPn
       }
     }
@@ -166,7 +166,8 @@ func scoreLoop(lg *loopGraph) error {
 
       // Sanity check: if this fires our most winning score code is broken, or there's some kind of loop propagation error.
       if maxChildScoreCurPlayer > mostWinningScore {
-        return fmt.Errorf("Max child score greater than most winning score: %s, %f > %f", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
+        // return fmt.Errorf("Max child score greater than most winning score: %s, %f > %f", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
+        fmt.Printf("Max child score greater than most winning score: %s, %f > %f", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
       }
 
       if maxChildScoreCurPlayer >= mostWinningScore || maxChildScoreCurPlayer > 0.9 {
@@ -235,10 +236,7 @@ func updateStateForScoredNode(curNode *playNode, scorableFrontier *DumbQueue,
       if !okR {
         return errors.New(fmt.Sprintf("Loop graph is not present in remaining exit nodes map: %+v, %+v", lg, remainingExitNodes))
       } 
-      if _, okE := exitNodes[curNode]; !okE {
-        return errors.New(fmt.Sprintf("Exit nodes does not contain play node: %+v, %+v", curNode, exitNodes))
-      }
-
+      // CurNode may have already been deleted in a previous iteration as well.
       delete(exitNodes, curNode)
     }
   }
@@ -402,6 +400,7 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGr
 
       loopGraphsToScore := getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs, loopsToUnscoredExitNodes)
       for _, lg := range loopGraphsToScore {
+        fmt.Printf("Scoring loop graph %p\n", lg)
         if err := scoreLoop(lg); err != nil {
           return err
         }

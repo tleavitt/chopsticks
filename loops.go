@@ -19,15 +19,9 @@ type loopGraph struct {
   size int
 };
 
-// Returns true if the given play node is an exit node of the given loop graph.
-// Exit nodes are nodes whose parent is in a graph, but they themselves are not in a graph.
-func isExitNode(pn *playNode, lg *loopGraph) bool {
-  for _, ln := range pn.lns {
-    if ln.lg == lg {
-      return true
-    }
-  }
-  return false
+// Returns true if the given play node is an exit node of any loop
+func isExitNode(pn *playNode) bool {
+  return len(pn.lns) > 0
 }
 
 func playNodeIsInLoop(pn *playNode, lg *loopGraph) bool {
@@ -151,7 +145,7 @@ func getExitNodes(lg *loopGraph, loopIdx int) map[*playNode]int {
       log.Fatal("loop node loop graph does not match head graph!")
     }
     for _, nextPn := range pn.nextNodes {
-      if isExitNode(nextPn, lg) {
+      if isExitNode(nextPn) {
         // Found an exit node, add it to our set
         exitNodes[nextPn] = loopIdx
       }
