@@ -46,14 +46,10 @@ func dequeueLoopNode(dq *DumbQueue) (*loopNode, error) {
   return ln.(*loopNode), nil
 }
 
-// Given a loop graph, find the "most winning" node for each player in that loop.
-// All exit nodes of the graph must be scored
-// TODO: could also implement by looping over the exit nodes instead?
+// Given a loop graph, find the current "most winning" node for each player in that loop.
 func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
   bestPlayer1 := initBestNode()
   bestPlayer2 := initBestNode()
-
-  // Go around the loop
 
   for i, curNode := 0, lg.head; i < lg.size; i, curNode = i+1, curNode.nextNode {
     // Invariant: the current node should be part of the loop graph:
@@ -61,30 +57,16 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
       return nil, nil, errors.New(fmt.Sprintf("Node in loop graph does not point to lg: %+v, lg: %p", curNode, lg))
     }
 
-    // Score all loop exit nodes leaving from this node
-    nodesToScore := make(map[move]*playNode, len(curNode.pn.nextNodes))
-    for m, nextPn := range curNode.pn.nextNodes {
-      // Some exit nodes might not be scored, and that's ok.
-      if isExitNode(nextPn) && nextPn.isScored {
-        nodesToScore[m] = nextPn
-      }
+    curScore, err := curNode.pn.computeScore(true)
+    if err != nil {
+      return nil, nil, err
     }
 
-    // If there are exit nodes: update the best move score. Otherwise just keep chugging along, we don't want to update
-    // the scores to zeros or some other value
-    if len(nodesToScore) > 0 {
-      _, curScore, err := getBestMoveAndScoreForCurrentPlayer(nodesToScore, false, false)
-      if err != nil {
-        return nil, nil, err
-      }
-
-      if curNode.pn.gs.turn == Player1 {
-        bestPlayer1.update(curScore, curNode)
-      } else {
-        bestPlayer2.update(curScore, curNode)
-      }
+    if curNode.pn.gs.turn == Player1 {
+      bestPlayer1.update(curScore, curNode)
+    } else {
+      bestPlayer2.update(curScore, curNode)
     }
-    // Move on to the next node in the loop.
   }
   // Note: at this point we may or may not have update the best scores for each player - if there are no
   // exit nodes on a particular player's turn it will not have a best score.
@@ -105,8 +87,8 @@ func scoreLoop(lg *loopGraph) error {
     return err
   }
   // Step two: score the most winning node(s) of the loop. The score is simply equal to the most winning edge.
-  // Add the loop-parents of the most winning nodes to 
   nodesToScore := createDumbQueue() // Values are *loopNode
+
   numNodesProcessed := 0
   if b1.node != nil {
     applyScore(b1) 
@@ -385,14 +367,15 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGr
 
   // We're done if the scorable frontier is empty and all loops have been scored, so we're not done if either 
   // there are nodes on the frontier, or there are unscored loop graphs
+  maxLoopCount := 2 * len(unscoredLoopGraphs)
   for loopCount := 0; !scorableFrontier.isEmpty() || len(unscoredLoopGraphs) > 0; loopCount++ {
-    if loopCount > 5 {
+    if loopCount > maxLoopCount {
       return errors.New("maxLoopCount exceeded in scoring iteration, frontier: " + scorableFrontier.toString(playNodeToString))
     }
     if DEBUG {
       fmt.Printf("scorePlayGraph: loop count %d, frontier size %d, unscoredLoopGraphs size %d\n", loopCount, scorableFrontier.size, len(unscoredLoopGraphs))
       fmt.Printf("Loops to exit nodes: %+v\n", loopsToUnscoredExitNodes)
-      fmt.Printf("Unscored loop graphs: %+v\n", unscoredLoopGraphs)
+      fmt.Printf("===== Unscored loop graphs: %+v\n", unscoredLoopGraphs)
       fmt.Printf("Exit nodes to loops: %+v\n", exitNodesToLoopGraph)
     }
     // if the frontier is empty, score a loop instead.
