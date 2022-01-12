@@ -92,6 +92,8 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
     }
 
 
+
+
     // Apply the normalized move to our gps and recurse
     nextGps := gps.deepCopy()
     nextGps.playNormalizedTurn(nextMove)
@@ -99,7 +101,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   }
 }
 
-func TestSolveBestMoves(t *testing.T) {
+func testSolveBestMoves(t *testing.T) {
   fmt.Println("starting TestSolveBestMoves")
   startState := gameState{
     player{1, 1}, player{1, 1}, Player1,
@@ -112,20 +114,26 @@ func TestSolveBestMoves(t *testing.T) {
   var i int
   var curNode = stateNode
   var gameResult GameResult
+  fmt.Printf("Starting play loop\n\n")
   for i, gameResult = 0, checkGameResult(curNode.gs); gameResult == Ongoing; i, gameResult = i+1, checkGameResult(curNode.gs) {
     if len(curNode.nextNodes) == 0 {
       fmt.Println("Hit leaf node, exiting")
       break;
     }
-    bestMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(false, false)
+    bestMove, scoreForCurrentPlayer, err := curNode.getBestMoveAndScoreForCurrentPlayer(false, false)
     if err != nil {
       t.Fatal(err.Error())
     }
+    score := turnToSign(curNode.gs.turn) * scoreForCurrentPlayer
+    if score != curNode.score {
+      t.Fatalf("Best score does not match node score: %f, %s", score, curNode.toString())
+    }
+
     node, ok := curNode.nextNodes[bestMove]
     if !ok {
       t.Fatalf("Best move not found in node states: %+v, %s", bestMove, curNode.toTreeString(1))
     }
-    fmt.Printf("Previous node: %s, best move: %+v, next node: %s\n", curNode.toString(), bestMove, node.toString())
+    fmt.Printf("Previous node: %s,\nBest move: %+v,\nNext node: %p, %s\n\n", curNode.toString(), bestMove, node, node.toString())
     curNode = node
   }
   if gameResult == Player1Wins {
@@ -136,5 +144,29 @@ func TestSolveBestMoves(t *testing.T) {
     fmt.Println("Computer ran out of moves!")
   }
   fmt.Println("finished TestSolveBestMoves")
+}
+
+func TestSolveBestMoves3(t *testing.T) {
+  fmt.Println("starting TestSolveBestMoves3")
+  prevNumFingers := setNumFingers(3)
+  testSolveBestMoves(t)
+  setNumFingers(prevNumFingers)
+  fmt.Println("finished TestSolveBestMoves3")
+}
+
+func TestSolveBestMoves4(t *testing.T) {
+  fmt.Println("starting TestSolveBestMoves4")
+  prevNumFingers := setNumFingers(4)
+  testSolveBestMoves(t)
+  setNumFingers(prevNumFingers)
+  fmt.Println("finished TestSolveBestMoves4")
+}
+
+func TestSolveBestMoves5(t *testing.T) {
+  fmt.Println("starting TestSolveBestMoves5")
+  prevNumFingers := setNumFingers(5)
+  testSolveBestMoves(t)
+  setNumFingers(prevNumFingers)
+  fmt.Println("finished TestSolveBestMoves5")
 }
 

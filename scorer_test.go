@@ -100,7 +100,7 @@ func TestScorePropagateScoresFork(t *testing.T) {
   fmt.Println("stopping TestPropagateScoresFork")
 }
 
-func TestScorePropagateScoresLoop(t *testing.T) {
+func TestScorePropagateScoresLoop1(t *testing.T) {
   fmt.Println("starting TestPropagateScoresLoop")
 
   // The three-four loop:

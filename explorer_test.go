@@ -138,3 +138,66 @@ func TestExploreInvalidGraphChild(t *testing.T) {
   expectInvalidGraph(sonNode, t)
   fmt.Println("finished TestInvalidGraphChild")
 }
+
+func TestSolidifyScore(t *testing.T) {
+  fmt.Println("starting TestSolidifyScore")
+  gs1 := &gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  gs2 := &gameState{
+    player{1, 1}, player{1, 2}, Player2,
+  }
+  gs3 := &gameState{
+    player{0, 1}, player{1, 2}, Player2,
+  }
+  gs4 := &gameState{
+    player{0, 1}, player{1, 2}, Player1,
+  }
+  gs5 := &gameState{
+    player{0, 1}, player{0, 1}, Player2,
+  }
+  gs6 := &gameState{
+    player{0, 1}, player{0, 0}, Player2,
+  }
+
+  n1 := createPlayNodeCopyGs(gs1)
+  n2 := createPlayNodeCopyGs(gs2)
+  n3 := createPlayNodeCopyGs(gs3)
+  n4 := createPlayNodeCopyGs(gs4)
+  n5 := createPlayNodeCopyGs(gs5)
+  n6 := createPlayNodeCopyGs(gs6)
+
+  // Add edges
+  m1 := move{Right, Left}
+  m2 := move{Right, Right}
+
+  addParentChildEdges(n1, n2, m1) 
+  addParentChildEdges(n1, n3, m2) 
+
+  addParentChildEdges(n2, n4, m1)
+  addParentChildEdges(n3, n4, m1)
+
+  addParentChildEdges(n4, n5, m1)
+  addParentChildEdges(n4, n6, m2)
+
+  // Set scores:
+  n6.score, n6.isScored = 0, true // Incorrect, should be 1
+  n5.score, n5.isScored = 0.5, true // Incorrect, should be 0
+  n4.score, n4.isScored = 0, true // Should be 1
+  n3.score, n3.isScored = 0, true // Should be 1
+  n2.score, n2.isScored = 0, true // Should be 1
+  n1.score, n1.isScored = 0, true // Should be 1
+
+  if err := solidifyScores(n1, 5); err != nil {
+    t.Fatal(err.Error())
+  }
+
+  if n1.score != 1.0 {
+    t.Fatal("Score update did not propagate.")
+  }
+  if n5.score != 0 {
+    t.Fatal("Score update did not propagate.")
+  }
+
+  fmt.Println("finished TestSolidifyScore")
+}

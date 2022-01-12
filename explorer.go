@@ -123,3 +123,41 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
   // Search is done, return the leaves we found
   return curNode, leaves, loops, nil
 }
+
+// Explore the game tree and correct any incorrect scores.
+func solidifyScores(startNode *playNode, maxDepth int) error {
+  return solidifyScoresImpl(startNode, make(map[*playNode]bool, 4), 0, maxDepth)
+}
+
+func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, depth int, maxDepth int) error {
+  // Abort after we hit the maximum depth.
+  if depth >= maxDepth { 
+    return nil
+  }
+  // Base case: we've been here before, return. Means we're in a loop or an intersection.
+  if visitedNodes[curNode] {
+    return nil
+  }
+  visitedNodes[curNode] = true
+
+  if !curNode.isScored {
+    return fmt.Errorf("Unscored node when solidifying scores: %s", curNode.toString())
+  }
+
+  // First, solidify scores for all children. For leaves this will be empty.
+  for _, childNode := range curNode.nextNodes {
+    if err := solidifyScoresImpl(childNode, visitedNodes, depth-1, maxDepth); err != nil {
+      return err
+    }
+  }
+
+  // Then, update the score for the current node.
+  prevScore := curNode.score
+  curNode.updateScore()
+  if curNode.score != prevScore {
+    if DEBUG {
+      fmt.Printf("Updated score for node %s, previous score: %f\n", curNode.toString(), prevScore)
+    }
+  }
+  return nil
+}

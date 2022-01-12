@@ -18,7 +18,7 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
     fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves, %d loops)", len(visitedStates), len(leaves), len(loops)))
   }
 
-  // Step two: build loop graphs, find exit nodes, and merge when encessary
+  // Step two: build loop graphs and find exit nodes
   loopGraphs := createLoopGraphs(loops)
   loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
 
@@ -30,12 +30,13 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
   }
 
   // Step three: propagate scores
-  // if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
-  //   return nil, nil, nil, nil, err
-  // }
+  if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
+    return nil, nil, nil, nil, err
+  }
+  // Step four: do one more pass down the tree and touch up any inaccuracies...
+  solidifyScores(root, maxDepth)
   if INFO {
     fmt.Println(fmt.Sprintf("Root score: %f", root.score))
   }
   return root, visitedStates, leaves, loopGraphs, err
 }
-

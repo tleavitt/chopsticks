@@ -65,7 +65,7 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
     nodesToScore := make(map[move]*playNode, len(curNode.pn.nextNodes))
     for m, nextPn := range curNode.pn.nextNodes {
       // Some exit nodes might not be scored, and that's ok.
-      if isExitNode(nextPn) && nextPn.isScored {
+      if isExitNode(nextPn, lg) && nextPn.isScored {
         nodesToScore[m] = nextPn
       }
     }
@@ -107,9 +107,11 @@ func scoreLoop(lg *loopGraph) error {
   // Step two: score the most winning node(s) of the loop. The score is simply equal to the most winning edge.
   // Add the loop-parents of the most winning nodes to 
   nodesToScore := createDumbQueue() // Values are *loopNode
+  numNodesProcessed := 0
   if b1.node != nil {
     applyScore(b1) 
     enqueueLoopParent(nodesToScore, b1.node)
+    numNodesProcessed++
     if DEBUG {
       fmt.Printf("Most winning node for p1: %s (%f)\n", b1.node.pn.toString(), b1.score)
     }
@@ -117,28 +119,26 @@ func scoreLoop(lg *loopGraph) error {
   if b2.node != nil {
     applyScore(b2) 
     enqueueLoopParent(nodesToScore, b2.node)
+    numNodesProcessed++
     if DEBUG {
       fmt.Printf("Most winning node for p2: %s (%f)\n", b2.node.pn.toString(), b2.score)
     }
   }
   // Step three: propagate the scores up **within the loop** from the most winning nodes. 
   // Repeat BFS until all nodes in the loop are scored, OR until we run out of ways to propagate up the loop.
-  for loopCount := 0; nodesToScore.size > 0; loopCount++ {
-    if loopCount > 10000 {
-      return errors.New("maxLoopCount exceeded, possible error in BFS graph. nodesToScore: %s" + nodesToScore.toString(loopNodeToString))
-    }
+  // TODO: maybe a lil sketchy
+  for ; nodesToScore.size > 0 && numNodesProcessed < lg.size; numNodesProcessed++ {
     curLoopNode, err := dequeueLoopNode(nodesToScore)
-    fmt.Printf("Dequeued: %s\n", curLoopNode.pn.toString())
     if err != nil {
       return err
     }
+    fmt.Printf("Dequeued: %s\n", curLoopNode.pn.toString())
     curPlayNode := curLoopNode.pn
     // If node is already scored, we've already processed it, so just skip it.
     if curPlayNode.isScored {
       if DEBUG {
-        fmt.Printf("Loop node is already scored, skipping: %s\n", curPlayNode.toString())
+        fmt.Printf("Loop node is already scored, rescoring: %s\n", curPlayNode.toString())
       }
-      continue
     }
     // If all children are scored, we can score this node. If NOT all children are scored, there's another loop intersection or an unscored
     // exit node of some kind.
@@ -164,9 +164,9 @@ func scoreLoop(lg *loopGraph) error {
         }
       }
 
-      // Sanity check: if this fires our most winning score code is broken.
+      // Sanity check: if this fires our most winning score code is broken, or there's some kind of loop propagation error.
       if maxChildScoreCurPlayer > mostWinningScore {
-        return fmt.Errorf("Max child score greater than most winning score: %+v, %f > %f", curPlayNode, maxChildScoreCurPlayer, mostWinningScore)
+        return fmt.Errorf("Max child score greater than most winning score: %s, %f > %f", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
       }
 
       if maxChildScoreCurPlayer >= mostWinningScore || maxChildScoreCurPlayer > 0.9 {
@@ -209,13 +209,10 @@ func isScorable(node *playNode) bool {
 func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) error {
   // Assume node has been scored; 
   // enqueue all parents of node that are now scorable (i.e. they are not scored but all their children are scored)
-  // Note: loop nodes are never scorable in this sense; they should never be on the 
+  // Note: loop nodes are never scorable in this sense; they should never be on the scorable frontier
   for _, parentNode := range node.prevNodes {
-    if isScorable(parentNode) {
-      // Invariant: loop nodes should never be scorable.
-      if len(parentNode.lns) != 0 {
-        return errors.New(fmt.Sprintf("Node is scorable but part of a loop: %+v", parentNode))
-      }
+    // Don't enqueue loop nodes, we'll handle them in the loop scoring logic.
+    if isScorable(parentNode) && len(parentNode.lns) == 0 {
       enqueuePlayNode(scorableFrontier, parentNode)
     } else {
       if DEBUG {
@@ -289,9 +286,11 @@ func dequeuePlayNode(dq *DumbQueue) (*playNode, error) {
 
 func scoreNodeAndUpdateState(curNode *playNode, scorableFrontier *DumbQueue, 
     remainingExitNodes map[*loopGraph]map[*playNode]int, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
-    // Nodes on the scorable frontier must be scorable.
+    // Nodes on the scorable frontier must be scorable. If they're not, they might have been enqueued twice,
+    // so drop them
     if !isScorable(curNode) {
-      return errors.New(fmt.Sprintf("Node on frontier is not scorable: %s", curNode.toString()))
+      fmt.Printf("Node on frontier is not scorable: %s", curNode.toString())
+      return nil
     }
 
     // Score the node
