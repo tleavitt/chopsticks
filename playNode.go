@@ -4,6 +4,7 @@ import (
   "fmt"
   "strings"
   "errors"
+  "math"
 )
 
 // ==== Move ==== 
@@ -291,36 +292,57 @@ func addChildEdge(parent *playNode, child *playNode) {
 }
 
 // Returns an error if any parent/child edge in the graph containing this node is not bi-directional
-func (node *playNode) validateEdges(recurse bool) error {
+func (node *playNode) validateEdges(recurse bool) (int, int, error) {
   if recurse {
-    return node.validateEdgesImpl(true, make(map[gameState]bool))
+    return node.validateEdgesImpl(true, []*playNode{node}, make(map[gameState]bool))
   } else {
     // Avoid memory allocation if it's unnecessary
-    return node.validateEdgesImpl(false, nil)
+    return node.validateEdgesImpl(false, nil, nil)
   }
 }
 
-func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameState]bool) error {
+func (node *playNode) validateEdgesImpl(recurse bool, curPath []*playNode, validatedStates map[gameState]bool) (int, int, error) {
+  // curDepth = current depth of this node
+  // minDepth: minimum depth of children of this node
+  // maxDepth: maximum depth of children of this node.
+  curDepth := len(curPath)
   if validatedStates[*node.gs] {
     // We've visited this node before, return.
-    return nil
+    // EDIT: is this an error?
+    return curDepth, curDepth, nil
   }
 
+  // Is there a bug in this??
   if validatedStates != nil {
     validatedStates[*node.gs] = true
   }
 
   // All children of this node must list this node as a parent.
+  minChildDepth, maxChildDepth := math.MaxInt32, 0
   for _, childNode := range node.nextNodes {
     if childNode.prevNodes[*node.gs] != node {
-      return errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s, child prev nodes: %+v", node.toTreeString(1), childNode.toString(), nodeStateMapToString(childNode.prevNodes)))
+      return curDepth, curDepth, errors.New(fmt.Sprintf("Child node does not contain parent that points to it: parent: %s, child %s, child prev nodes: %+v", node.toTreeString(1), childNode.toString(), nodeStateMapToString(childNode.prevNodes)))
     }
-    // Recurse down the graph
     if recurse {
-      if err := childNode.validateEdgesImpl(recurse, validatedStates); err != nil {
-        return err
+      nextPath := append(curPath, childNode)
+      min, max, err := childNode.validateEdgesImpl(recurse, nextPath, validatedStates)
+      if err != nil {
+        return curDepth, curDepth, err
+      }
+      if min < minChildDepth {
+        minChildDepth = min
+      }
+      if max > maxChildDepth {
+        maxChildDepth = max
       }
     }
+  }
+  // If we updated in the loop, change our min/max depth values. Otherwise keep them as curDepth. That way leaves
+  // always return curDepth for both.
+  minDepth, maxDepth := curDepth, curDepth
+  if maxChildDepth > 0 {
+    minDepth = minChildDepth
+    maxDepth = maxChildDepth
   }
 
   // All parents of this node must list this node as a child
@@ -328,17 +350,17 @@ func (node *playNode) validateEdgesImpl(recurse bool, validatedStates map[gameSt
   for _, parentNode := range node.prevNodes {
     parentMove := findNodeInMap(node, parentNode.nextNodes)
     if parentMove == nil {
-      return errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
+       return curDepth, curDepth, errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
     }
-    // Recurse up the graph 
-    if recurse {
-      if err := parentNode.validateEdgesImpl(recurse, validatedStates); err != nil {
-        return err
-      }
-    }
+    // Recurse up the graph?
+    // if recurse {
+    //   if _, _, err := parentNode.validateEdgesImpl(recurse, curPath, validatedStates, curDepth - 1); err != nil {
+    //     return curDepth, curDepth, err
+    //   }
+    // }
   }
 
-  return nil
+  return minDepth, maxDepth, nil
 }
 
 // ==== end playNode ==== 

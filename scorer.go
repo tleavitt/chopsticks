@@ -114,7 +114,9 @@ func scoreLoop(lg *loopGraph) error {
     if err != nil {
       return err
     }
-    fmt.Printf("Dequeued: %s\n", curLoopNode.pn.toString())
+    if DEBUG {
+      fmt.Printf("Dequeued: %s\n", curLoopNode.pn.toString())
+    }
     curPlayNode := curLoopNode.pn
     // If node is already scored, we've already processed it, so just skip it.
     if curPlayNode.isScored {
@@ -152,7 +154,8 @@ func scoreLoop(lg *loopGraph) error {
       // Sanity check: if this fires our most winning score code is broken, or there's some kind of loop propagation error.
       if maxChildScoreCurPlayer > mostWinningScore {
         // return fmt.Errorf("Max child score greater than most winning score: %s, %f > %f", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
-        fmt.Printf("Max child score greater than most winning score: %s, %f > %f", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
+
+        fmt.Printf("Max child score greater than most winning score: %s, %f > %f\n", curPlayNode.toTreeString(1), maxChildScoreCurPlayer, mostWinningScore)
       }
 
       if maxChildScoreCurPlayer >= mostWinningScore || maxChildScoreCurPlayer > 0.9 {
@@ -386,7 +389,9 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGr
 
       loopGraphsToScore := getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs, loopsToUnscoredExitNodes)
       for _, lg := range loopGraphsToScore {
-        fmt.Printf("Scoring loop graph %p\n", lg)
+        if DEBUG {
+          fmt.Printf("Scoring loop graph %p\n", lg)
+        }
         if err := scoreLoop(lg); err != nil {
           return err
         }

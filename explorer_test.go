@@ -5,14 +5,14 @@ import (
   "testing"
 )
 
-func testExploreStates(numFingers int8, t *testing.T) {
+func testExploreStates(numFingers int8, maxDepth int, t *testing.T) {
   fmt.Println("starting TestExploreStates")
   prevNumFingers := setNumFingers(numFingers)
   startState := &gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
   visitedStates := make(map[gameState]*playNode, 38)
-  startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, 15)
+  startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, maxDepth)
   if err != nil {
     t.Fatal(err)
   }
@@ -21,8 +21,15 @@ func testExploreStates(numFingers int8, t *testing.T) {
   fmt.Printf("Loops: %+v\n", loops)
   fmt.Println("Loops:")
   for _, loop := range loops {
-    for _, node := range loop {
+    var prevTurn Turn
+    for i, node := range loop {
+      if i > 0 {
+        if node.gs.turn == prevTurn {
+          t.Fatalf("Consecutive loop members have the same turn") 
+        }
+      }
       fmt.Printf("%s, ", node.gs.toString())
+      prevTurn = node.gs.turn
     }
     fmt.Printf("\n")
   }
@@ -34,21 +41,28 @@ func testExploreStates(numFingers int8, t *testing.T) {
   }
 
   // Yay it's fixed now
-  if err := startNode.validateEdges(true); err != nil {
+  minDepth, maxDepth, err := startNode.validateEdges(true)
+  if err != nil {
     t.Fatal(err)
   }
 
-  // fmt.Println(startNode.toTreeString(15))
+  fmt.Printf("Min game tree depth: %d, max game tree depth: %d\n", minDepth, maxDepth)
+
+  fmt.Println(startNode.toTreeString(minDepth + 1))
   setNumFingers(prevNumFingers)
   fmt.Println("finished TestExploreStates")
 }
 
 func TestExploreStates3(t *testing.T) {
-  testExploreStates(3, t)
+  testExploreStates(3, 17, t)
 }
 
 func TestExploreStates4(t *testing.T) {
-  testExploreStates(4, t)
+  testExploreStates(4, 15, t)
+}
+
+func TestExploreStates5(t *testing.T) {
+  testExploreStates(5, 20, t)
 }
 
 
@@ -69,8 +83,15 @@ func TestExploreLoop(t *testing.T) {
   fmt.Printf("Loops: %+v\n", loops)
   fmt.Println("Loops:")
   for _, loop := range loops {
-    for _, node := range loop {
+    var prevTurn Turn
+    for i, node := range loop {
+      if i > 0 {
+        if node.gs.turn == prevTurn {
+          t.Fatalf("Consecutive loop members have the same turn") 
+        }
+      }
       fmt.Printf("%s, ", node.gs.toString())
+      prevTurn = node.gs.turn
     }
     fmt.Printf("\n")
   }
@@ -82,9 +103,12 @@ func TestExploreLoop(t *testing.T) {
   // }
 
   // Yay it's fixed now
-  if err := startNode.validateEdges(true); err != nil {
+  minDepth, maxDepth, err := startNode.validateEdges(true)
+  if err != nil {
     t.Fatal(err)
   }
+
+  fmt.Printf("Min game tree depth: %d, max game tree depth: %d\n", minDepth, maxDepth)
 
   // fmt.Println(startNode.toTreeString(15))
   setNumFingers(prevNumFingers)
@@ -93,7 +117,7 @@ func TestExploreLoop(t *testing.T) {
 
 func expectInvalidGraph(startNode *playNode, t *testing.T) {
   var err error
-  if err = startNode.validateEdges(true); err == nil {
+  if _, _, err = startNode.validateEdges(true); err == nil {
     t.Fatal("Expected validateEdges to error on invalid graph, but it did not")
   }
   fmt.Printf("Validate edges caught invalid graph: %s\n", err.Error())

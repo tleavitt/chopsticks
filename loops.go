@@ -62,10 +62,8 @@ func createEmptyLoopGraph() *loopGraph {
 
 // Create a set of loop graphs for the given loops; map values are the corresponding index into the loops slice.
 func createLoopGraphs(loops [][]*playNode) map[*loopGraph]int {
-  fmt.Printf("createLoopGraphs: %+v\n", loops)
   loopGraphs := make(map[*loopGraph]int, len(loops))
   for loopIdx, loop := range loops {
-    fmt.Printf("Cur loop: %+v\n", loop)
 
     var curLoopGraph = createEmptyLoopGraph() 
     var prevLoopNode *loopNode = nil

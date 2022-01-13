@@ -10,7 +10,7 @@ type gameState struct {
 	// NOTE: don't make these pointers, otherwise copying and keying doesn't work.
 	player1 player
 	player2 player
-	turn Turn // Turn indicates who the player is vs the receiver
+turn Turn // Turn indicates who the player is vs the receiver
 }
 
 func (gs *gameState) equals(other *gameState) bool {

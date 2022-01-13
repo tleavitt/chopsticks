@@ -11,7 +11,7 @@ import (
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
 func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
-  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[gameState]*playNode, 4), make([][]*playNode, 0), 0, maxDepth)
+  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[gameState]*playNode, 4), make([][]*playNode, 0), maxDepth)
 }
 
 // Yes, O(N) search. Whatever, it's probably fine
@@ -32,7 +32,7 @@ func copyPath(path []*playNode) []*playNode {
 }
 
 
-func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, loops [][]*playNode, depth int, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
+func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, loops [][]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
   // Sanity check: curNode should be the last node of the path
   if curPath[len(curPath) - 1] != curNode {
     return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))
@@ -45,6 +45,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
 
   // Memoize the current node now so we can catch intersections in recursive calls.
   visitedStates[curGs] = curNode
+  depth := len(curPath)
 
   if DEBUG {
     fmt.Printf("Exploring node: %s, depth: %d\n", curNode.toString(), depth)
@@ -55,11 +56,12 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
     return nil, nil, nil, errors.New("Current node already has children, should not be explored: " + curNode.toString())
   }
 
+
   // Check for terminal states:
   if curNode.isTerminal() || depth >= maxDepth {
     // This is a leaf node, add it to our output collection and continue
       if DEBUG {
-        fmt.Printf(fmt.Sprintf("Found leaf node, not exploring further. cur state: %+v\n", curNode.gs))
+        fmt.Printf(fmt.Sprintf("Found leaf node, not exploring further. cur state: %+v, depth %d\n", curNode.gs, depth))
       }
     leaves[curGs] = curNode
     return curNode, leaves, loops, nil
@@ -89,7 +91,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
           return nil, nil, nil, errors.New(fmt.Sprintf("Visiting states map is corrupt: visitedStates[%+v] = %s", nextNode.gs, existingNode.toString()))
         }
         if DEBUG {
-          fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, marking current node as leaf and not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
+          fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
         }
         addParentChildEdges(curNode, existingNode, curMove)
         // Check for loops
@@ -97,26 +99,22 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
           curLoop := copyPath(curPath[loopIdx:])
           if DEBUG {
             fmt.Printf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop)
-            fmt.Printf("Current loops: %+v\n", loops)
           }
           loops = append(loops, curLoop)
-          if DEBUG {
-            fmt.Printf("New loops: %+v\n", loops)
-          }
         }
       } else {
         // Add the parent/child pointers and recurse on the child
         addParentChildEdges(curNode, nextNode, curMove)
         // append the latest node to our current path
-        oldLen := len(curPath)
+        // oldLen := len(curPath)
         nextPath := append(curPath, nextNode)
-        _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, depth + 1, maxDepth)
+        _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, maxDepth)
         loops = newLoops
         if err != nil {
           return nil, nil, nil, err
         }
-        // Remove the latest node from our path to keep recursing
-        curPath = curPath[:oldLen]
+        // Remove the latest node from our path to keep recursing (not necessary?)
+        // curPath = curPath[:oldLen]
       }
     }
   }

@@ -101,7 +101,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   }
 }
 
-func testSolveBestMoves(t *testing.T) {
+func testSolveBestMoves(maxDepth int, t *testing.T) {
   fmt.Println("starting TestSolveBestMoves")
   startState := gameState{
     player{1, 1}, player{1, 1}, Player1,
@@ -113,6 +113,12 @@ func testSolveBestMoves(t *testing.T) {
 
   var i int
   var curNode = stateNode
+  expectedGameResult := Ongoing
+  if stateNode.score > 0.9 {
+    expectedGameResult = Player1Wins
+  } else if stateNode.score < -0.9 {
+    expectedGameResult = Player2Wins
+  }
   var gameResult GameResult
   fmt.Printf("Starting play loop\n\n")
   for i, gameResult = 0, checkGameResult(curNode.gs); gameResult == Ongoing; i, gameResult = i+1, checkGameResult(curNode.gs) {
@@ -136,6 +142,11 @@ func testSolveBestMoves(t *testing.T) {
     fmt.Printf("Previous node: %s,\nBest move: %+v,\nNext node: %p, %s\n\n", curNode.toString(), bestMove, node, node.toString())
     curNode = node
   }
+  if gameResult != expectedGameResult {
+    t.Fatalf("Game did not end as expected: expected result: %v, actual result: %v", expectedGameResult, gameResult)
+  }
+  fmt.Printf("Play over after %d moves\n", i)
+
   if gameResult == Player1Wins {
     fmt.Println("Player 1 wins")
   } else if gameResult == Player2Wins {
@@ -149,7 +160,7 @@ func testSolveBestMoves(t *testing.T) {
 func TestSolveBestMoves3(t *testing.T) {
   fmt.Println("starting TestSolveBestMoves3")
   prevNumFingers := setNumFingers(3)
-  testSolveBestMoves(t)
+  testSolveBestMoves(15, t)
   setNumFingers(prevNumFingers)
   fmt.Println("finished TestSolveBestMoves3")
 }
@@ -157,16 +168,16 @@ func TestSolveBestMoves3(t *testing.T) {
 func TestSolveBestMoves4(t *testing.T) {
   fmt.Println("starting TestSolveBestMoves4")
   prevNumFingers := setNumFingers(4)
-  testSolveBestMoves(t)
+  testSolveBestMoves(15, t)
   setNumFingers(prevNumFingers)
   fmt.Println("finished TestSolveBestMoves4")
 }
 
-// func TestSolveBestMoves5(t *testing.T) {
-//   fmt.Println("starting TestSolveBestMoves5")
-//   prevNumFingers := setNumFingers(5)
-//   testSolveBestMoves(t)
-//   setNumFingers(prevNumFingers)
-//   fmt.Println("finished TestSolveBestMoves5")
-// }
+func TestSolveBestMoves5(t *testing.T) {
+  fmt.Println("starting TestSolveBestMoves5")
+  prevNumFingers := setNumFingers(5)
+  testSolveBestMoves(20, t)
+  setNumFingers(prevNumFingers)
+  fmt.Println("finished TestSolveBestMoves5")
+}
 
