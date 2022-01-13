@@ -140,9 +140,10 @@ func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, dept
   }
   visitedNodes[curNode] = true
 
-  if !curNode.isScored {
-    return fmt.Errorf("Unscored node when solidifying scores: %s", curNode.toString())
-  }
+  // Allow unscored nodes as well
+  // if !curNode.isScored {
+  //   return fmt.Errorf("Unscored node when solidifying scores: %s", curNode.toString())
+  // }
 
   // First, solidify scores for all children. For leaves this will be empty.
   for _, childNode := range curNode.nextNodes {

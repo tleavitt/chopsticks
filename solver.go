@@ -5,6 +5,7 @@ import (
 )
 
 const DEFAULT_MAX_DEPTH int = 25
+const useSimpleScore bool = false
 
 // Generate a play strategy given a starting game state. 
 func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map[gameState]*playNode, map[*loopGraph]int, error) {
@@ -20,23 +21,26 @@ func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map
 
   // Step two: build loop graphs and find exit nodes
   loopGraphs := createLoopGraphs(loops)
-  loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
+  if useSimpleScore {
+    simpleScore(root, loopGraphs, maxDepth)
+  } else {
+    loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
 
-  if INFO {
-    fmt.Printf("Created %d loops\n",len(loops))
-    for lg, exitNodes := range loopGraphsToExitNodes {
-      fmt.Printf("== loop graph: %p = %+v, num exit nodes: %d\n", lg, lg, len(exitNodes))
+    if INFO {
+      for lg, exitNodes := range loopGraphsToExitNodes {
+        fmt.Printf("== loop graph: %p = %+v, num exit nodes: %d\n", lg, lg, len(exitNodes))
+      }
     }
-  }
 
-  // Step three: propagate scores
-  if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
-    return nil, nil, nil, nil, err
-  }
-  // Step four: do one more pass down the tree and touch up any inaccuracies...
-  solidifyScores(root, maxDepth)
-  if INFO {
-    fmt.Println(fmt.Sprintf("Root score: %f", root.score))
+    // Step three: propagate scores
+    if err := scorePlayGraph(leaves, loopGraphsToExitNodes); err != nil {
+      return nil, nil, nil, nil, err
+    }
+    // Step four: do one more pass down the tree and touch up any inaccuracies...
+    solidifyScores(root, maxDepth)
+    if INFO {
+      fmt.Println(fmt.Sprintf("Root score: %f", root.score))
+    }
   }
   return root, visitedStates, leaves, loopGraphs, err
 }

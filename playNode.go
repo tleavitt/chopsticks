@@ -131,7 +131,7 @@ func (node *playNode) getBestMoveAndScoreForCurrentPlayer(log bool, allowUnscore
 
 
 func (node *playNode) computeScore(allowUnscoredChild bool) (float32, error) {
-  // If the node is a leaf: 
+  // If all children are scored, return the best score based on the children.
   if len(node.nextNodes) == 0 {
     // Determine the score directly
     return node.getHeuristicScore(), nil
@@ -159,23 +159,6 @@ func (node *playNode) updateScore() error {
     }
     return nil
   }
-}
-
-func (node *playNode) maxChildScoreForPlayer() float32 {
-  var maxScore float32 = -2.0
-  turnSign := turnToSign(node.gs.turn)
-  for _, child := range node.nextNodes {
-    if !child.isScored {
-      continue
-    }
-    childScore := child.score
-    childScoreForCurrentPlayer := turnSign * childScore
-
-    if childScoreForCurrentPlayer > maxScore {
-      maxScore = childScoreForCurrentPlayer
-    }
-  }
-  return maxScore
 }
 
 func (node *playNode) allChildrenAreScored() bool {

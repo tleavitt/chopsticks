@@ -134,7 +134,10 @@ func scoreLoop(lg *loopGraph) error {
     } else {
       // Killer heuristic: if the max score of a child of this node is == the score of the most winning exit, give the node that score.
       // Alternatively, if the max score of a child node is a maxed out score, give it that score as well.
-      maxChildScoreCurPlayer := curPlayNode.maxChildScoreForPlayer()
+      _, maxChildScoreCurPlayer, err := curPlayNode.getBestMoveAndScoreForCurrentPlayer(false, true)
+      if err != nil {
+        return err
+      }
       var mostWinningScore float32 = 2
       if curPlayNode.gs.turn == Player1 {
         if b1.node != nil {
@@ -404,5 +407,17 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGr
   }
 
   // Done!
+  return nil
+}
+
+// Instead of doing fancy loop detection, just give all loop nodes a heuristic score off the bat,
+// then to a score solidification down to the leaves. 
+func simpleScore(root *playNode, loopGraphs map[*loopGraph]int, maxDepth int) error {
+  for lg, _ := range loopGraphs {
+    applyHeuristicScores(lg)  
+  }
+  if err := solidifyScores(root, maxDepth); err != nil {
+    return err
+  }
   return nil
 }
