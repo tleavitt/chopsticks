@@ -352,12 +352,12 @@ func (node *playNode) validateEdgesImpl(recurse bool, curPath []*playNode, valid
     if parentMove == nil {
        return curDepth, curDepth, errors.New(fmt.Sprintf("Parent node does not contain child that points to it: parent: %s, child %s",parentNode.toTreeString(1), node.toString()))
     }
-    // Recurse up the graph?
-    // if recurse {
-    //   if _, _, err := parentNode.validateEdgesImpl(recurse, curPath, validatedStates, curDepth - 1); err != nil {
-    //     return curDepth, curDepth, err
-    //   }
-    // }
+    // Recurse up the graph to catch invalid parents
+    if recurse {
+      if _, _, err := parentNode.validateEdgesImpl(recurse, curPath[:len(curPath) - 1], validatedStates); err != nil {
+        return curDepth, curDepth, err
+      }
+    }
   }
 
   return minDepth, maxDepth, nil

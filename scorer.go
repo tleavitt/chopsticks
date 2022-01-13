@@ -340,7 +340,7 @@ func getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs map[*loopGraph]bool,
   return returnLoops
 }
 
-func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGraph]map[*playNode]int) error {
+func scorePlayGraph(leaves map[*playNode][]*playNode, loopsToExitNodes map[*loopGraph]map[*playNode]int) error {
   // TODO also pass loops?
   // Compute the exit nodes; this map maintains all unscored exit nodes of a loop
   loopsToUnscoredExitNodes := copyLoopsToExitNodes(loopsToExitNodes)
@@ -351,7 +351,7 @@ func scorePlayGraph(leaves map[gameState]*playNode, loopsToExitNodes map[*loopGr
   scorableFrontier := createDumbQueue() // Values are *playNode
 
   // First, score the leaves and enqueue scorable nodes onto the scorable frontier. 
-  for _, leaf := range leaves {
+  for leaf, _ := range leaves {
     // Safety belt:
     if len(leaf.nextNodes) != 0 {
       return errors.New("Not a leaf: " + leaf.toString()) 

@@ -10,8 +10,12 @@ import (
 // These could either be terminal states or require further exploration. We should start at these states when scoring
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
-func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
-  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[gameState]*playNode, 4), make([][]*playNode, 0), maxDepth)
+func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
+  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth)
+}
+
+func exploreStatesRetryable(startNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
+  return exploreStatesImpl(startNode, curPath, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth)
 }
 
 // Yes, O(N) search. Whatever, it's probably fine
@@ -32,7 +36,7 @@ func copyPath(path []*playNode) []*playNode {
 }
 
 
-func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[gameState]*playNode, loops [][]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, [][]*playNode, error) {
+func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[*playNode][]*playNode, loops [][]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
   // Sanity check: curNode should be the last node of the path
   if curPath[len(curPath) - 1] != curNode {
     return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))
@@ -63,7 +67,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
       if DEBUG {
         fmt.Printf(fmt.Sprintf("Found leaf node, not exploring further. cur state: %+v, depth %d\n", curNode.gs, depth))
       }
-    leaves[curGs] = curNode
+    leaves[curNode] = copyPath(curPath)
     return curNode, leaves, loops, nil
   }
   // Otherwise, iterate over all possible moves

@@ -34,7 +34,7 @@ func testExploreStates(numFingers int8, maxDepth int, t *testing.T) {
     fmt.Printf("\n")
   }
   // Not necessarily the case with loops
-  for _, leafNode := range leaves {
+  for leafNode, _ := range leaves {
     if len(leafNode.nextNodes) > 0 {
       t.Fatalf("Leaf node has children: %s", leafNode.toString())
     }

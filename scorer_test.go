@@ -46,8 +46,8 @@ func TestScorePropagateScoresSimple(t *testing.T) {
   addParentChildEdges(dadNode, sonNode, move{Right, Left})
 
   // Score
-  leaves := make(map[gameState]*playNode, 1)
-  leaves[*sonNode.gs] = sonNode
+  leaves := make(map[*playNode][]*playNode, 1)
+  leaves[sonNode] = []*playNode{}
   if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]int)); err != nil {
     t.Fatal(err.Error())
   }
@@ -88,8 +88,8 @@ func TestScorePropagateScoresFork(t *testing.T) {
   addParentChildEdges(twoprime, three, move{Right, Left})
 
   // Score
-  leaves := make(map[gameState]*playNode, 1)
-  leaves[*three.gs] = three
+  leaves := make(map[*playNode][]*playNode, 1)
+  leaves[three] = []*playNode{}
   // Should require exactly two nodes on the frontier (two and two prime)
   if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]int)); err != nil {
     t.Fatal(err.Error())
@@ -134,7 +134,7 @@ func TestScorePropagateScoresLoop1(t *testing.T) {
   addParentChildEdges(threeNode, fourNode, move{Right, Right})
   addParentChildEdges(fourNode, oneNode, move{Right, Right})
 
-  leaves := make(map[gameState]*playNode)
+  leaves := make(map[*playNode][]*playNode)
 
   loops := [][]*playNode{
     []*playNode{oneNode, twoNode, threeNode, fourNode},
@@ -191,8 +191,8 @@ func TestScorePropagateScoresLoop2(t *testing.T) {
   addParentChildEdges(threeNode, exitNode, move{Right, Left})
   addParentChildEdges(fourNode, oneNode, move{Right, Right})
 
-  leaves := map[gameState]*playNode{
-    *exitNode.gs: exitNode,
+  leaves := map[*playNode][]*playNode{
+    exitNode: []*playNode{},
   }
 
   loops := [][]*playNode{
@@ -276,11 +276,11 @@ func TestScorePropagateScoresComplex(t *testing.T) {
   addParentChildEdges(dadNode, sisNode, move{Left, Right})
   addParentChildEdges(dadNode, sis2Node, move{Right, Left})
 
-  leaves := map[gameState]*playNode{
-    *broNode.gs: broNode,
-    *sisNode.gs: sisNode,
-    *sis2Node.gs: sis2Node,
-    *exitNode.gs: exitNode,
+  leaves := map[*playNode][]*playNode{
+    broNode: []*playNode{},
+    sisNode: []*playNode{},
+    sis2Node: []*playNode{},
+    exitNode: []*playNode{},
   }
 
   loops := [][]*playNode{
@@ -315,7 +315,7 @@ func TestScoreSimpleLoop(t *testing.T) {
   loops := createSimpleLoop()
   distinctLoopGraphs := createLoopGraphs(loops) 
   loopGraphsToExitNodes := getAllExitNodes(distinctLoopGraphs)
-  if err := scorePlayGraph(make(map[gameState]*playNode), loopGraphsToExitNodes); err != nil {
+  if err := scorePlayGraph(make(map[*playNode][]*playNode), loopGraphsToExitNodes); err != nil {
     t.Fatal(err.Error())
   }
   for _, loop := range loops {
@@ -327,89 +327,3 @@ func TestScoreSimpleLoop(t *testing.T) {
   }
   fmt.Println("stopping TestScoreSimpleLoop")
 }
-
-func createInterlockedLoops() ([][]*playNode, map[gameState]*playNode) {
-  // Odd numbers are player1's turn, even numbers are player 2's turn
-  commonNode1 := createPlayNodeCopyGs(&gameState{player{1, 3,}, player{2, 1,}, Player1,}) // 1
-  commonNode2 := createPlayNodeCopyGs(&gameState{player{2, 4,}, player{3, 2,}, Player2,}) // 2
-
-  pn11 := createPlayNodeCopyGs(&gameState{player{1, 1,}, player{1, 1,}, Player1,}) // 1
-  pn12 := createPlayNodeCopyGs(&gameState{player{1, 2,}, player{1, 2,}, Player2,}) // 2
-  pn14 := createPlayNodeCopyGs(&gameState{player{1, 4,}, player{1, 4,}, Player2,}) // 2
-
-  pn22 := createPlayNodeCopyGs(&gameState{player{2, 2,}, player{2, 2,}, Player2,}) // 2
-  pn23 := createPlayNodeCopyGs(&gameState{player{2, 3,}, player{2, 3,}, Player1,}) // 1
-
-  pn31 := createPlayNodeCopyGs(&gameState{player{3, 1,}, player{3, 1,}, Player1,}) // 1
-  pn33 := createPlayNodeCopyGs(&gameState{player{3, 3,}, player{3, 3,}, Player1,}) // 1
-  pn34 := createPlayNodeCopyGs(&gameState{player{3, 4,}, player{3, 4,}, Player2,}) // 2
-
-  loops := [][]*playNode{
-    []*playNode{pn11, pn12, commonNode1, pn14},
-    []*playNode{commonNode1, pn22, pn23, commonNode2},
-    []*playNode{pn31, commonNode2, pn33, pn34},
-  } 
-
-  // ExitNode 1: player1 wins
-  exitNode1 := createPlayNodeReuseGs(&gameState{
-    player{0, 2,}, player{0, 0,}, Player2,})
-  exitNode1.score = 1
-  exitNode1.isScored = true
-
-  // ExitNode 2: player2 will win 
-  exitNode2 := createPlayNodeReuseGs(&gameState{
-    player{0, 0,}, player{2, 2,}, Player1,})
-  exitNode2.score = -1
-  exitNode2.isScored = true
-
-  // Exit Node 3: player1 will win
-  exitNode3 := createPlayNodeReuseGs(&gameState{
-    player{0, 1,}, player{0, 0,}, Player1,})
-  exitNode3.score = 1
-  exitNode3.isScored = true
-
-  // ExitNode 4: dead even
-  exitNode4 := createPlayNodeReuseGs(&gameState{
-    player{1, 1,}, player{1, 1,}, Player2,})
-  exitNode4.score = 0
-  exitNode4.isScored = true
-
-  exitNodes := map[gameState]*playNode{
-    *exitNode1.gs: exitNode1,
-    *exitNode2.gs: exitNode2,
-    *exitNode3.gs: exitNode3,
-    *exitNode4.gs: exitNode4,
-  }
-
-  // Wire it all up
-  // Loop 1
-  addParentChildEdges(pn11, pn12, move{Right, Left})
-  addParentChildEdges(pn12, commonNode1, move{Right, Left})
-  addParentChildEdges(commonNode1, pn14, move{Right, Left})
-  addParentChildEdges(pn14, pn11, move{Right, Left})
-
-  // One neutral exit node for common1
-  addParentChildEdges(commonNode1, exitNode4, move{Left, Left})
-
-  // Loop 2
-  addParentChildEdges(commonNode1, pn22, move{Left, Right})
-  addParentChildEdges(pn22, pn23, move{Left, Right})
-  addParentChildEdges(pn23, commonNode2, move{Left, Right})
-  addParentChildEdges(commonNode2, commonNode1, move{Left, Right})
-
-  // One winning exit node for 23
-  addParentChildEdges(pn23, exitNode1, move{Left, Left})
-
-  // Loop 3
-  addParentChildEdges(pn31, commonNode2, move{Right, Left})
-  addParentChildEdges(commonNode2, pn33, move{Right, Left})
-  addParentChildEdges(pn33, pn34, move{Right, Left})
-  addParentChildEdges(pn34, pn31, move{Right, Left})
-
-    // One winning and one losing exit node for 34
-  addParentChildEdges(pn34, exitNode2, move{Left, Left})
-  addParentChildEdges(pn34, exitNode3, move{Left, Right})
-
-  return loops, exitNodes
-}
-

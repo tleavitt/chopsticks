@@ -42,7 +42,7 @@ func TestSolveTreeValid5(t *testing.T) {
 }
 
 func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gameState]bool, 
-                       existingStates map[gameState]*playNode, leaves map[gameState]*playNode, t *testing.T) {
+                       existingStates map[gameState]*playNode, leaves map[*playNode][]*playNode, t *testing.T) {
 
   // Test one: our game play state should be valid
   if err := gps.validate(); err != nil {
@@ -68,7 +68,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   }
   // If this node has no children, then it should be a leaf:
   if len(node.nextNodes) == 0 {
-    if leaves[*node.gs] == nil {
+    if leaves[node] == nil {
       t.Fatalf("Game state has no children but is not a leaf: %+v", *node.gs)
     }
   }
