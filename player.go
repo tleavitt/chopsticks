@@ -5,7 +5,7 @@ import (
 )
 
 // var NUM_FINGERS int = 5
-var NUM_FINGERS int8 = 3
+var NUM_FINGERS int8 = 4
 
 // TODO: don't make this a global variable
 func setNumFingers(numFingers int8) int8 {
