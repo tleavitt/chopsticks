@@ -162,11 +162,11 @@ func TestSolveBestMoves4(t *testing.T) {
   fmt.Println("finished TestSolveBestMoves4")
 }
 
-func TestSolveBestMoves5(t *testing.T) {
-  fmt.Println("starting TestSolveBestMoves5")
-  prevNumFingers := setNumFingers(5)
-  testSolveBestMoves(t)
-  setNumFingers(prevNumFingers)
-  fmt.Println("finished TestSolveBestMoves5")
-}
+// func TestSolveBestMoves5(t *testing.T) {
+//   fmt.Println("starting TestSolveBestMoves5")
+//   prevNumFingers := setNumFingers(5)
+//   testSolveBestMoves(t)
+//   setNumFingers(prevNumFingers)
+//   fmt.Println("finished TestSolveBestMoves5")
+// }
 

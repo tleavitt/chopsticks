@@ -309,30 +309,6 @@ func createSimpleLoop() [][]*playNode {
   return loops
 }
 
-func TestScoreMostWinningNodesSimple(t *testing.T) {
-  fmt.Println("starting TestMostWinningNodesSimple")
-  // Note: no exit nodes here.
-  loops := createSimpleLoop()
-  distinctLoopGraphs := createLoopGraphs(loops) 
-
-  if len(distinctLoopGraphs) != 1 {
-    t.Fatalf("Unexpected number of loop graphs: %d", len(distinctLoopGraphs))
-  }
-
-  for lg, _ := range distinctLoopGraphs {
-    b1, b2, err := findMostWinningNodes(lg)
-    if err != nil {
-      t.Fatal(err.Error())
-    }
-    if b1.score != -2 || b2.score != -2 {
-      t.Fatalf("Did not leave best moves uninitialized for simpler loop, b1: %+v, b2: %+v", b1, b2)
-    }
-  }
-
-
-  fmt.Println("finished TestMostWinningNodesSimple")
-}
-
 func TestScoreSimpleLoop(t *testing.T) {
   fmt.Println("starting TestScoreSimpleLoop")
   // Note: no exit nodes here.
@@ -437,76 +413,3 @@ func createInterlockedLoops() ([][]*playNode, map[gameState]*playNode) {
   return loops, exitNodes
 }
 
-func TestScoreMostWinningNodesInterlinked(t *testing.T) {
-  fmt.Println("starting TestMostWinningNodesInterlinked")
-  loops, _ := createInterlockedLoops()
-  distinctLoopGraphs := createLoopGraphs(loops) 
-  if len(distinctLoopGraphs) != 1 {
-    t.Fatal("Did not join distinct loops into one")
-  }
-
-  for lg, _ := range distinctLoopGraphs {
-    b1, b2, err := findMostWinningNodes(lg)
-    if err != nil {
-      t.Fatal(err.Error())
-    }
-    fmt.Printf("Most winning nodes: %+v, %+v", b1, b2)
-    // Best player1 score should be p23
-    pn23 := loops[1][2]
-    if b1.score != 1 && b1.node.pn != pn23 {
-      t.Fatalf("Unexpected winning node for player1: %+v, playNode %+v", b1, b1.node.pn)
-    }
-
-    // Best player2 score should be p34
-    pn34 := loops[2][3]
-    if b2.score != 1 && b2.node.pn != pn34 {
-      t.Fatalf("Unexpected winning node for player2: %+v, playNode %+v", b1, b1.node.pn)
-    }
-  }
-
-  fmt.Println("finished TestMostWinningNodesInterlinked")
-}
-
-func getFirstLoopGraph(loopGraphs map[*loopGraph]int) *loopGraph {
-  for lg, _ := range loopGraphs {
-    return lg
-  }
-  return nil
-}
-
-func TestScoreInterlocked(t *testing.T) {
-  fmt.Println("starting TestScoreInterlocked")
-  // Note: no exit nodes here.
-  loops, _ := createInterlockedLoops()
-  distinctLoopGraphs := createLoopGraphs(loops) 
-  lg := getFirstLoopGraph(distinctLoopGraphs)
-  if err := scoreLoop(lg); err != nil {
-    t.Fatal(err.Error())
-  }
-  for i, loop := range loops {
-    for j, node := range loop {
-      // No node should have a zero score:
-      fmt.Printf("pn[%d][%d].score = %+v\n", i + 1, j + 1, node)
-      if !node.isScored || node.score == 0 {
-        // t.Fatalf("Incorrectly scored node: loops[%d][%d] = %+v", i, j, node)
-      }
-    }
-  }
-  // Spot checks
-  pn11 := loops[0][0]
-  if pn11.score < 0.9 {
-    t.Fatalf("pn11 has incorrect score: %+v", pn11)
-  }
-
-  commonNode1 := loops[0][2]
-  if commonNode1.score < 0.9 {
-    t.Fatalf("commonNode1 has incorrect score: %+v", commonNode1)
-  }
-
-  pn31 := loops[2][0]
-  if pn31.score > -0.9 {
-    t.Fatalf("pn31 has incorrect score: %+v", pn31)
-  }
-
-  fmt.Println("stopping TestScoreInterlocked")
-}

@@ -24,6 +24,7 @@ func TestGamePlayStateDeepCopy(t *testing.T) {
 // Damn this shit is tricky
 func TestGamePlayState1(t *testing.T) {
   fmt.Println("starting TestGamePlayState1")
+  prevNumFingers := setNumFingers(3)
   gs := gameState{
     player{2, 1}, player{1, 1}, Player1,
   }
@@ -47,10 +48,12 @@ func TestGamePlayState1(t *testing.T) {
   if !gps.normalizedState.equals(expectedNormalizedState) {
     t.Fatalf("Expected normalized state does match observed normalized state: %+v, %+v", expectedNormalizedState, gps.normalizedState)
   }
+  setNumFingers(prevNumFingers)
 }
 
 func TestGamePlayState2(t *testing.T) {
   fmt.Println("starting TestGamePlayState2")
+  prevNumFingers := setNumFingers(3)
   gs := gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
@@ -80,10 +83,13 @@ func TestGamePlayState2(t *testing.T) {
   if !gps.normalizedState.equals(expectedNormalizedState) {
     t.Fatalf("Expected normalized state does match observed normalized state: %+v, %+v", expectedNormalizedState, gps.normalizedState)
   }
+  setNumFingers(prevNumFingers)
 }
 
 func TestGamePlayState3(t *testing.T) {
   fmt.Println("starting TestGamePlayState3")
+  prevNumFingers := setNumFingers(3)
+
   gs := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }
@@ -111,10 +117,13 @@ func TestGamePlayState3(t *testing.T) {
   if !gps.normalizedState.equals(expectedNormalizedState) {
     t.Fatalf("Expected normalized state does match observed normalized state: %+v, %+v", expectedNormalizedState, gps.normalizedState)
   }
+  setNumFingers(prevNumFingers)
 }
 
 func TestGamePlayState4(t *testing.T) {
   fmt.Println("starting TestGamePlayState4")
+  prevNumFingers := setNumFingers(3)
+
 
   gs := gameState{
     player{2, 1}, player{1, 2}, Player1,
@@ -143,4 +152,5 @@ func TestGamePlayState4(t *testing.T) {
   if !gps.normalizedState.equals(expectedNormalizedState) {
     t.Fatalf("Expected normalized state does match observed normalized state: %+v, %+v", expectedNormalizedState, gps.normalizedState)
   }
+  setNumFingers(prevNumFingers)
 }
