@@ -12,11 +12,14 @@ import (
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
 func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
-  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth)
+  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth, 0)
 }
 
 func exploreStatesRetryable(startNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
-  return exploreStatesImpl(startNode, curPath, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth)
+  if INFO {
+    fmt.Printf("Exploring state %s\n", startNode.toString())
+  }
+  return exploreStatesImpl(startNode, curPath, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth, len(curPath) - 1)
 }
 
 // Yes, O(N) search. Whatever, it's probably fine
@@ -42,11 +45,13 @@ type exploreCandidate struct {
   heuristic float32
 }
 
-func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[*playNode][]*playNode, loops [][]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
+func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[*playNode][]*playNode, loops [][]*playNode, maxDepth int, baseDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
   // Sanity check: curNode should be the last node of the path
   if curPath[len(curPath) - 1] != curNode {
     return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))
   }
+  depth := len(curPath) - baseDepth
+
   curGs := *curNode.gs
   if visitedStates[curGs] != nil {
     // We should always catch intersections before we make recursive calls, so error if we detect an intersection
@@ -55,11 +60,24 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
 
   // Memoize the current node now so we can catch intersections in recursive calls.
   visitedStates[curGs] = curNode
-  depth := len(curPath)
 
   if DEBUG {
     fmt.Printf("Exploring node: %s, depth: %d\n", curNode.toString(), depth)
   }
+
+  // Check if we've hit the max depth - if so mark this node as a "frontier node", i.e. a non-terminal leaf, and DON'T save it 
+  // to our visited states map (since we haven't visited it.)
+  // TODO: too support retryable-ness this should happen earlier.
+  if depth >= maxDepth {
+    // This is a leaf node, add it to our output collection and continue
+    if INFO {
+      fmt.Printf(fmt.Sprintf("Hit max depth, not exploring further. cur state: %+v, depth %d\n", curNode.gs, depth))
+    }
+    // Mark this as a leaf, but _NOT_ an explored state
+    leaves[curNode] = copyPath(curPath)
+    return curNode, leaves, loops, nil
+  }
+
 
   // Sanity check: curNode should not have any children. If it does something funny is going on.
   if len(curNode.nextNodes) > 0 {
@@ -67,10 +85,10 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
   }
 
 
-  // Check for terminal states:
-  if curNode.isTerminal() || depth >= maxDepth {
+  // Check for terminal states, i.e. TERMINAL leaf nodes. We also need to save these because we need them for scoring.
+  if curNode.isTerminal() {
     // This is a leaf node, add it to our output collection and continue
-      if DEBUG {
+      if INFO {
         fmt.Printf(fmt.Sprintf("Found leaf node, not exploring further. cur state: %+v, depth %d\n", curNode.gs, depth))
       }
     leaves[curNode] = copyPath(curPath)
@@ -117,10 +135,10 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
       if !existingNode.gs.equals(nextNode.gs) {
         return nil, nil, nil, errors.New(fmt.Sprintf("Visiting states map is corrupt: visitedStates[%+v] = %s", nextNode.gs, existingNode.toString()))
       }
-      if DEBUG {
-        fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
-      }
       addParentChildEdges(curNode, existingNode, *curMove)
+      if DEBUG {
+        fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, not exploring further. cur node: %s, loop move: %+v, next node: %s\n", curNode.toString(), curMove, existingNode.toString()))
+      }
       // Check for loops
       if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
         curLoop := copyPath(curPath[loopIdx:])
@@ -138,7 +156,7 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
       //   nextNode, nextNode.getHeuristicScoreForCurrentPlayer(),
       // })
       nextPath := append(curPath, nextNode)
-      _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, maxDepth)
+      _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, maxDepth, baseDepth)
       loops = newLoops
       if err != nil {
         return nil, nil, nil, err
@@ -153,18 +171,18 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
 }
 
 // Explore the game tree and correct any incorrect scores.
-func solidifyScores(startNode *playNode, maxDepth int) error {
+func solidifyScores(startNode *playNode, maxDepth int) bool {
   return solidifyScoresImpl(startNode, make(map[*playNode]bool, 4), 0, maxDepth)
 }
 
-func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, depth int, maxDepth int) error {
+func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, depth int, maxDepth int) bool {
   // Abort after we hit the maximum depth.
   if depth >= maxDepth { 
-    return nil
+    return false
   }
   // Base case: we've been here before, return. Means we're in a loop or an intersection.
   if visitedNodes[curNode] {
-    return nil
+    return false
   }
   visitedNodes[curNode] = true
 
@@ -174,9 +192,10 @@ func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, dept
   // }
 
   // First, solidify scores for all children. For leaves this will be empty.
+  someChildUpdatedScore := false
   for _, childNode := range curNode.nextNodes {
-    if err := solidifyScoresImpl(childNode, visitedNodes, depth-1, maxDepth); err != nil {
-      return err
+    if solidifyScoresImpl(childNode, visitedNodes, depth-1, maxDepth) {
+      someChildUpdatedScore = true
     }
   }
 
@@ -187,6 +206,8 @@ func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, dept
     if DEBUG {
       fmt.Printf("Updated score for node %s, previous score: %f\n", curNode.toString(), prevScore)
     }
+    return true
+  } else {
+    return someChildUpdatedScore
   }
-  return nil
 }

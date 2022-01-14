@@ -9,7 +9,7 @@ func testSolveTreeValid(t *testing.T) {
   startState := gameState{
     player{2, 1}, player{2, 1}, Player1,
   }
-  stateNode, existingStates, leaves, _, solveErr := solve(&startState, 15)
+  stateNode, existingStates, leaves, _, solveErr := solve(&startState, 50)
   gps := createGamePlayState(&startState)
   if solveErr != nil {
     t.Fatal(solveErr.Error())
@@ -91,9 +91,6 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
       t.Fatalf("Normalized play state does not match node state after move: play state: %+v, node state: %+v, move: %+v", *playState, *nextNode.gs, nextMove)
     }
 
-
-
-
     // Apply the normalized move to our gps and recurse
     nextGps := gps.deepCopy()
     nextGps.playNormalizedTurn(nextMove)
@@ -101,16 +98,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   }
 }
 
-func testSolveBestMoves(maxDepth int, t *testing.T) {
-  fmt.Println("starting TestSolveBestMoves")
-  startState := gameState{
-    player{1, 1}, player{1, 1}, Player1,
-  }
-  stateNode, _, _, _, err := solve(&startState, 15)
-  if err != nil {
-    t.Fatal(err.Error())
-  }
-
+func testBestMoves(stateNode *playNode, t *testing.T) {
   var i int
   var curNode = stateNode
   expectedGameResult := Ongoing
@@ -122,6 +110,9 @@ func testSolveBestMoves(maxDepth int, t *testing.T) {
   var gameResult GameResult
   fmt.Printf("Starting play loop\n\n")
   for i, gameResult = 0, checkGameResult(curNode.gs); gameResult == Ongoing; i, gameResult = i+1, checkGameResult(curNode.gs) {
+    if i > 100 {
+      break
+    }
     if len(curNode.nextNodes) == 0 {
       fmt.Println("Hit leaf node, exiting")
       break;
@@ -157,6 +148,17 @@ func testSolveBestMoves(maxDepth int, t *testing.T) {
   fmt.Println("finished TestSolveBestMoves")
 }
 
+func testSolveBestMoves(maxDepth int, t *testing.T) {
+  startState := gameState{
+    player{1, 1}, player{1, 1}, Player1,
+  }
+  stateNode, _, _, _, err := solve(&startState, maxDepth)
+  if err != nil {
+    t.Fatal(err.Error())
+  }
+  testBestMoves(stateNode, t)
+}
+
 func TestSolveBestMoves3(t *testing.T) {
   fmt.Println("starting TestSolveBestMoves3")
   prevNumFingers := setNumFingers(3)
@@ -168,7 +170,7 @@ func TestSolveBestMoves3(t *testing.T) {
 func TestSolveBestMoves4(t *testing.T) {
   fmt.Println("starting TestSolveBestMoves4")
   prevNumFingers := setNumFingers(4)
-  testSolveBestMoves(15, t)
+  testSolveBestMoves(50, t)
   setNumFingers(prevNumFingers)
   fmt.Println("finished TestSolveBestMoves4")
 }
@@ -176,8 +178,7 @@ func TestSolveBestMoves4(t *testing.T) {
 func TestSolveBestMoves5(t *testing.T) {
   fmt.Println("starting TestSolveBestMoves5")
   prevNumFingers := setNumFingers(5)
-  testSolveBestMoves(20, t)
+  testSolveBestMoves(100, t)
   setNumFingers(prevNumFingers)
   fmt.Println("finished TestSolveBestMoves5")
 }
-

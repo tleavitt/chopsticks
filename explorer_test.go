@@ -212,8 +212,8 @@ func TestSolidifyScore(t *testing.T) {
   n2.score, n2.isScored = 0, true // Should be 1
   n1.score, n1.isScored = 0, true // Should be 1
 
-  if err := solidifyScores(n1, 5); err != nil {
-    t.Fatal(err.Error())
+  if updated := solidifyScores(n1, 5); !updated {
+    t.Fatal("Scores did not update when they should have")
   }
 
   if n1.score != 1.0 {

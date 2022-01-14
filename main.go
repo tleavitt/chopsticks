@@ -11,7 +11,7 @@ import (
 )
 
 // const DEBUG bool = true
-const DEBUG bool = false
+var DEBUG bool = false
 const INFO bool = true
 
 type GameResult int8

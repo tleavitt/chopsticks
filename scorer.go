@@ -192,8 +192,8 @@ func applyHeuristicScores(lg *loopGraph) {
 }
 
 func isScorable(node *playNode) bool {
-  // return !node.isScored && node.allChildrenAreScored()
-  return node.allChildrenAreScored()
+  return !node.isScored && node.allChildrenAreScored()
+  // return node.allChildrenAreScored()
 }
 
 func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) error {
@@ -276,7 +276,7 @@ func scoreNodeAndUpdateState(curNode *playNode, scorableFrontier *DumbQueue,
     // Nodes on the scorable frontier must be scorable. If they're not, they might have been enqueued twice,
     // so drop them
     if !isScorable(curNode) {
-      fmt.Printf("Node on frontier is not scorable: %s", curNode.toString())
+      fmt.Printf("Node on frontier is not scorable: %s\n", curNode.toString())
       return nil
     }
 
@@ -422,8 +422,6 @@ func simpleScore(root *playNode, loopGraphs map[*loopGraph]int, maxDepth int) er
   for lg, _ := range loopGraphs {
     applyHeuristicScores(lg)  
   }
-  if err := solidifyScores(root, maxDepth); err != nil {
-    return err
-  }
+  solidifyScores(root, maxDepth)
   return nil
 }
