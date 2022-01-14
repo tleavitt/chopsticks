@@ -192,7 +192,8 @@ func applyHeuristicScores(lg *loopGraph) {
 }
 
 func isScorable(node *playNode) bool {
-  return !node.isScored && node.allChildrenAreScored()
+  // return !node.isScored && node.allChildrenAreScored()
+  return node.allChildrenAreScored()
 }
 
 func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) error {

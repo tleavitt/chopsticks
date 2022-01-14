@@ -10,8 +10,8 @@ import (
   "time"
 )
 
-const DEBUG bool = true
-// const DEBUG bool = false
+// const DEBUG bool = true
+const DEBUG bool = false
 const INFO bool = true
 
 type GameResult int8

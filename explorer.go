@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "errors"
+  "sort"
 )
 
 // DFS exploration of all states at a certain depth from the given start node. 
@@ -35,6 +36,11 @@ func copyPath(path []*playNode) []*playNode {
   return newPath
 }
 
+type exploreCandidate struct {
+  pn *playNode
+  moveToPn *move
+  heuristic float32
+}
 
 func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[*playNode][]*playNode, loops [][]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
   // Sanity check: curNode should be the last node of the path
@@ -71,6 +77,9 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
     return curNode, leaves, loops, nil
   }
   // Otherwise, iterate over all possible moves
+
+  // Micro-opt: recurse on the best nodes for the next player first, according to their heuristic
+  exploreCandidates := []*exploreCandidate{}
   for _, playerHand := range curNode.gs.getPlayer().getDistinctPlayableHands() {
     for _, receiverHand := range curNode.gs.getReceiver().getDistinctPlayableHands()  {
       curMove := move{playerHand, receiverHand}  
@@ -82,46 +91,63 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
       }        
       nextNode := createPlayNodeReuseGs(nextState)
 
-      // Here we have to check for possible intersections and loops. 
-      // An intersection is when the current path leads to a state we've already explored somewhere else in our search.
-      // A loop is an intersection where the existing state is on our current path.
-      // If we find an intersection, we need to add parent/child pointers from the curNode to the existing node to complete
-      // the graph
-      // In addition, if we find a loop, we need to store the loop in our "loops" return value.
-      existingNode, exists := visitedStates[*nextNode.gs]
-      if exists {
-        // Sanity check
-        if !existingNode.gs.equals(nextNode.gs) {
-          return nil, nil, nil, errors.New(fmt.Sprintf("Visiting states map is corrupt: visitedStates[%+v] = %s", nextNode.gs, existingNode.toString()))
-        }
-        if DEBUG {
-          fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
-        }
-        addParentChildEdges(curNode, existingNode, curMove)
-        // Check for loops
-        if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
-          curLoop := copyPath(curPath[loopIdx:])
-          if DEBUG {
-            fmt.Printf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop)
-          }
-          loops = append(loops, curLoop)
-        }
-      } else {
-        // Add the parent/child pointers and recurse on the child
-        addParentChildEdges(curNode, nextNode, curMove)
-        // append the latest node to our current path
-        // oldLen := len(curPath)
-        nextPath := append(curPath, nextNode)
-        _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, maxDepth)
-        loops = newLoops
-        if err != nil {
-          return nil, nil, nil, err
-        }
-        // Remove the latest node from our path to keep recursing (not necessary?)
-        // curPath = curPath[:oldLen]
-      }
+      exploreCandidates = append(exploreCandidates, &exploreCandidate{
+        nextNode, &curMove, nextNode.getHeuristicScoreForCurrentPlayer(),
+      })
     }
   }
+  // Sort next nodes by decreasing heuristic (i.e. best nodes for next player first)
+  sort.Slice(exploreCandidates, func(i, j int) bool {
+    return exploreCandidates[i].heuristic > exploreCandidates[j].heuristic
+  })
+
+  // Recurse
+  for _, toExplore := range exploreCandidates {
+    nextNode := toExplore.pn
+    curMove := toExplore.moveToPn
+    // Here we have to check for possible intersections and loops. 
+    // An intersection is when the current path leads to a state we've already explored somewhere else in our search.
+    // A loop is an intersection where the existing state is on our current path.
+    // If we find an intersection, we need to add parent/child pointers from the curNode to the existing node to complete
+    // the graph
+    // In addition, if we find a loop, we need to store the loop in our "loops" return value.
+    existingNode, exists := visitedStates[*nextNode.gs]
+    if exists {
+      // Sanity check
+      if !existingNode.gs.equals(nextNode.gs) {
+        return nil, nil, nil, errors.New(fmt.Sprintf("Visiting states map is corrupt: visitedStates[%+v] = %s", nextNode.gs, existingNode.toString()))
+      }
+      if DEBUG {
+        fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, not exploring further. cur state: %+v, loop move: %+v, next state: %+v\n", curNode.gs, curMove, existingNode.gs))
+      }
+      addParentChildEdges(curNode, existingNode, *curMove)
+      // Check for loops
+      if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
+        curLoop := copyPath(curPath[loopIdx:])
+        if DEBUG {
+          fmt.Printf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop)
+        }
+        loops = append(loops, curLoop)
+      }
+    } else {
+      // Add the parent/child pointers and recurse on the child
+      addParentChildEdges(curNode, nextNode, *curMove)
+      // append the latest node to our current path
+      // oldLen := len(curPath)
+      // exploreCandidates = append(exploreCandidates, &exploreCandidate{
+      //   nextNode, nextNode.getHeuristicScoreForCurrentPlayer(),
+      // })
+      nextPath := append(curPath, nextNode)
+      _, _, newLoops, err := exploreStatesImpl(nextNode, nextPath, visitedStates, leaves, loops, maxDepth)
+      loops = newLoops
+      if err != nil {
+        return nil, nil, nil, err
+      }
+      // Remove the latest node from our path to keep recursing (not necessary?)
+      // curPath = curPath[:oldLen]
+    }
+  }
+
   // Search is done, return the leaves we found
   return curNode, leaves, loops, nil
 }

@@ -207,6 +207,10 @@ func (node *playNode) getHeuristicScore() float32 {
   }
 }
 
+func (node *playNode) getHeuristicScoreForCurrentPlayer() float32 {
+  return turnToSign(node.gs.turn) * node.getHeuristicScore()
+}
+
 func turnToSign(t Turn) float32 {
   if t == Player1 {
     return 1
