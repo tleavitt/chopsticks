@@ -157,7 +157,7 @@ func main() {
         fmt.Println("Error when solving: " + solveErr.Error())
         return nil
       }
-      if DEBUG || c.Bool("dump-state") {
+      if c.Bool("dump-state") {
         fmt.Println(stateNode.toTreeString(9999))
       }
       fmt.Println("Let's play a game of chopsticks! You be Player 1.")
