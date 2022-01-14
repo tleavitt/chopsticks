@@ -173,6 +173,7 @@ func main() {
           }
         }
         if gps.state.turn == Player1 {
+        // if false {
           stateNode, err = runPlayerTurn(gps, stateNode)  
         } else {
           time.Sleep(1 * time.Second)
