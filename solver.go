@@ -6,7 +6,7 @@ import (
   "sort"
 )
 
-const DEFAULT_MAX_DEPTH int = 100
+const DEFAULT_MAX_DEPTH int = 150
 const useSimpleScore bool = false
 
 func getShallowestLeaf(leaves map[*playNode][]*playNode) (*playNode, []*playNode) {

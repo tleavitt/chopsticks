@@ -7,13 +7,16 @@ import (
 
 func testSolveTreeValid(t *testing.T) {
   startState := gameState{
-    player{2, 1}, player{2, 1}, Player1,
+    player{1, 1}, player{1, 1}, Player1,
   }
-  stateNode, existingStates, leaves, _, solveErr := solve(&startState, 50)
+  stateNode, existingStates, leaves, _, solveErr := solve(&startState, 150)
   gps := createGamePlayState(&startState)
   if solveErr != nil {
     t.Fatal(solveErr.Error())
   } 
+  // fmt.Println(existingStates[gameState{
+  //   player{4, 4}, player{2, 2}, Player1,
+  // }].toString())
   validateSolveNode(gps, stateNode, make(map[gameState]bool, len(existingStates)), existingStates, leaves, t)
 }
 
@@ -70,6 +73,16 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   if len(node.nextNodes) == 0 {
     if leaves[node] == nil {
       t.Fatalf("Game state has no children but is not a leaf: %+v", *node.gs)
+    }
+  }
+
+  // Get all legal moves for this game state
+  for _, playerHand := range node.gs.getPlayer().getDistinctPlayableHands() {
+    for _, receiverHand := range node.gs.getReceiver().getDistinctPlayableHands() {
+      m := move{playerHand, receiverHand}
+      if node.nextNodes[m] == nil {
+        t.Fatalf("Possible move not in next nodes: %+v, %s", m, node.toString())
+      }
     }
   }
 
