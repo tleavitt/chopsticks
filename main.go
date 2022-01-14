@@ -181,6 +181,7 @@ func main() {
         if err != nil {
           return err
         }
+        fmt.Printf("Cur state: %s\n", stateNode.toString())
       }
 
       // Game over!

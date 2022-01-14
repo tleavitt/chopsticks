@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var NUM_FINGERS int = 5
+var NUM_FINGERS int8 = 5
 // var NUM_FINGERS int8 = 4
 
 // TODO: don't make this a global variable
