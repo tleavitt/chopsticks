@@ -6,7 +6,28 @@
   </head>
   <body>
     <div id="app">
-      {{ message }}
+     <div class="container">
+        <div class="grid-outer">
+          <div class="grid-inner p2lh-container">
+            <img class="p2lh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          </div>
+        </div>
+        <div class="grid-outer">
+          <div class="grid-inner p2rh-container">
+            <img class="p2rh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          </div>
+        </div>
+        <div class="grid-outer">
+          <div class="grid-inner p1lh-container">
+            <img class="p1lh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          </div>
+        </div>
+        <div class="grid-outer">
+          <div class="grid-inner p1rh-container">
+            <img class="p1rh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          </div>
+        </div>
+      </div> 
     </div>
 
     <script>
@@ -17,5 +38,39 @@
         }
       });
     </script>
+    <style>
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 5px;
+        width: 550px;
+        height: 550px;
+      }
+      .container div {
+        /*background-color: red;*/
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden
+      }
+      .container .grid-inner {
+        width: 180px;
+        height: 250px;
+        overflow: hidden
+      }
+      /* Player 2*/ 
+      .p2lh-container {
+       transform: rotate(180deg) ;
+      }
+
+      .p2rh-container {
+       transform: scaleX(-1) rotate(180deg) ;
+      }
+      /* Player 1 */ 
+      .p1lh-container {
+       transform:  scaleX(-1);
+      }
+    </style>
   </body>
 </html>
