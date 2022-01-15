@@ -9,6 +9,11 @@ import (
     "github.com/gorilla/mux"
 )
 
+type nextStateAndMove struct {
+    nextState gameState
+    m move
+}
+
 func getImageRequestHandler(path string) http.Handler {
     fn := func (w http.ResponseWriter, r *http.Request) {
         fmt.Printf("serving image for %s\n", r.URL)
@@ -44,13 +49,38 @@ func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
             http.Error(w, "can't read body", http.StatusBadRequest)
             return
         }
-        // var uigs *uiGameState = nil
-        // if err := json.Unmarshal(body, uigs); err != nil {
-        //     fmt.Println(err.Error())
-        //     panic(err)
-        // }
-        // fmt.Printf("Got %+v\n", uigs)
-        // Send it back at them.
+        gs, gameMove, err := parseUiMove(body)
+        if err != nil {
+            w.WriteHeader(http.StatusBadRequest)
+            return
+        }
+        fmt.Printf("Got %+v, %+v\n", gs, m)
+
+        // Normalize the game state:
+        gps := createGamePlayState(gs)
+        // Play the player's move
+        gps.playGameTurn(gameMove)
+        // Look up the new state in our solve map
+        curNode, exists := solveMap[*gps.normalizedState]
+        if !exists {
+            log.Printf("Did not find game state in solve map: %s", gps.toString())
+            http.Error(w, "can't read body", http.StatusBadRequest)
+            return
+        }
+        // Get the best move for the current node:
+        normalizedComputerMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(DEBUG, true) // TODO: don't allow unscored child?
+        if err != nil {
+            return curNode, err
+        }
+        // And translate it into the move the player would see
+        guiComputerMove, err := gps.playNormalizedTurn(normalizedComputerMove)
+
+        next := nextStateAndMove{
+            *gps.state,
+            guiComputerMove,
+        }
+
+        // Send them our move and the new state.
         fmt.Fprintf(w, "%s", body)
     }
     return http.HandlerFunc(fn)

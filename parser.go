@@ -76,6 +76,7 @@ func playerFromMap(playerMap map[string]interface{}) (*player, error) {
 
 
 // HOLY MOTHER OF FUCK THIS SUCKSSSSS
+// 150 lines of code just to parse some fucking json
 func parseUiMove(jsonBody []byte) (*gameState, *move, error) {
     var body map[string]interface{}
     if err := json.Unmarshal(jsonBody, &body); err != nil {

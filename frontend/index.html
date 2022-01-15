@@ -112,6 +112,12 @@
         }
       }
 
+      class MoveQueue {
+        constructor() {
+          this.lastPendingMove = null;
+        }
+      }
+
       // Controllers
       function disableClicksForHand(ph) {
         const container = document.getElementById(ph + "-container");
