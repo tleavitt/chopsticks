@@ -7,6 +7,7 @@ import (
     "net/http"
     "io/ioutil"
     "github.com/gorilla/mux"
+    "encoding/json"
 )
 
 type nextStateAndMove struct {
@@ -49,18 +50,16 @@ func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
             http.Error(w, "can't read body", http.StatusBadRequest)
             return
         }
-        gs, gameMove, err := parseUiMove(body)
+        gs, err := parseUiMove(body)
         if err != nil {
             w.WriteHeader(http.StatusBadRequest)
             return
         }
-        fmt.Printf("Got %+v, %+v\n", gs, m)
+        fmt.Printf("Got %+v\n", gs)
 
         // Normalize the game state:
         gps := createGamePlayState(gs)
-        // Play the player's move
-        gps.playGameTurn(gameMove)
-        // Look up the new state in our solve map
+        // Look up the state in our solve map
         curNode, exists := solveMap[*gps.normalizedState]
         if !exists {
             log.Printf("Did not find game state in solve map: %s", gps.toString())
@@ -70,7 +69,9 @@ func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
         // Get the best move for the current node:
         normalizedComputerMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(DEBUG, true) // TODO: don't allow unscored child?
         if err != nil {
-            return curNode, err
+            log.Printf("Error finding best move for %s", curNode.toString())
+            http.Error(w, "can't read body", http.StatusBadRequest)
+            return
         }
         // And translate it into the move the player would see
         guiComputerMove, err := gps.playNormalizedTurn(normalizedComputerMove)
@@ -80,6 +81,10 @@ func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
             guiComputerMove,
         }
 
+        w.WriteHeader(http.StatusOK)
+        w.Header().Set("Content-Type", "application/json")
+        jsonResp, _ := json.Marshal(next) 
+        w.Write(jsonResp)
         // Send them our move and the new state.
         fmt.Fprintf(w, "%s", body)
     }

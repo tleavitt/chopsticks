@@ -45,20 +45,6 @@ func interfaceToTurn(turnIf interface{}) (Turn, error) {
     }
 }
 
-func interfaceToHand(handIf interface{}) (Hand, error) {
-    handStr, ok := handIf.(string)
-    if !ok {
-        return Left, fmt.Errorf("Hand is not a string %+v", handIf)
-    }
-    if handStr == "lh" {
-        return Left, nil
-    } else if handStr == "rh" {
-        return Right, nil
-    } else {
-        return Left, fmt.Errorf("Unrecognized hand %s", handStr)
-    }
-}
-
 func playerFromMap(playerMap map[string]interface{}) (*player, error) {
     p := player{1, 1}
     if lh, err := getAndCastInt(playerMap, "lh"); err == nil {
@@ -76,71 +62,42 @@ func playerFromMap(playerMap map[string]interface{}) (*player, error) {
 
 
 // HOLY MOTHER OF FUCK THIS SUCKSSSSS
-// 150 lines of code just to parse some fucking json
-func parseUiMove(jsonBody []byte) (*gameState, *move, error) {
+func parseUiMove(jsonBody []byte) (*gameState, error) {
     var body map[string]interface{}
     if err := json.Unmarshal(jsonBody, &body); err != nil {
-        return nil, nil, err
+        return nil, err
     }
 
     // Parse the gamestate
     gs := initGame()
-    if gsMap, err := getAndCastMap(body, "gs"); err == nil {
-        if player1Map, err := getAndCastMap(gsMap, "p1"); err == nil {
-            if player1, err := playerFromMap(player1Map); err == nil {
-                gs.player1 = *player1
-            } else {
-                return nil, nil, err
-            }
+    if player1Map, err := getAndCastMap(body, "p1"); err == nil {
+        if player1, err := playerFromMap(player1Map); err == nil {
+            gs.player1 = *player1
         } else {
-            return nil, nil, err
-        }
-        if player2Map, err := getAndCastMap(gsMap, "p2"); err == nil {
-            if player2, err := playerFromMap(player2Map); err == nil {
-                gs.player2 = *player2
-            } else {
-                return nil, nil, err
-            }
-        } else {
-            return nil, nil, err
-        }
-        if turnIf, ok := gsMap["turn"]; ok {
-            if turn, err := interfaceToTurn(turnIf); err == nil {
-                gs.turn = turn
-            } else {
-                return nil, nil, err
-            }
-        } else {
-            return nil, nil, errors.New("Missing key: turn")
+            return nil, err
         }
     } else {
-        return nil, nil, err
+        return nil, err
+    }
+    if player2Map, err := getAndCastMap(body, "p2"); err == nil {
+        if player2, err := playerFromMap(player2Map); err == nil {
+            gs.player2 = *player2
+        } else {
+            return nil, err
+        }
+    } else {
+        return nil, err
+    }
+    if turnIf, ok := body["turn"]; ok {
+        if turn, err := interfaceToTurn(turnIf); err == nil {
+            gs.turn = turn
+        } else {
+            return nil, err
+        }
+    } else {
+        return nil, errors.New("Missing key: turn")
     }
 
-    // Parse the move
-    var m *move = &move{Left, Left}
-    if moveMap, err := getAndCastMap(body, "move"); err == nil {
-        if playerHandIf, ok := moveMap["playerHand"]; ok {
-            if playerHand, err := interfaceToHand(playerHandIf); err == nil {
-                m.playerHand = playerHand
-            } else {
-                return nil, nil, err
-            }
-        } else {
-            return nil, nil, errors.New("Missing key: playerHand")
-        }
-        if receiverHandIf, ok := moveMap["receiverHand"]; ok {
-            if receiverHand, err := interfaceToHand(receiverHandIf); err == nil {
-                m.receiverHand = receiverHand
-            } else {
-                return nil, nil, err
-            }
-        } else {
-            return nil, nil, errors.New("Missing key: playerHand")
-        }
-    } else {
-        return nil, nil, err
-    }
-    fmt.Printf("Got %+v, %+v\n", gs, m)
-    return gs, m, nil
+    fmt.Printf("Got %+v\n", gs)
+    return gs, nil
 }
