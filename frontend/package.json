@@ -8,9 +8,6 @@
   },
   "keywords": [],
   "license": "MIT",
-  "devDependencies": {
-    "serve": "^11.2.0"
-  },
   "dependencies": {
     "vue": "^2.6.14"
   }
