@@ -4,8 +4,14 @@ build:
 test: build
 	go test
 
-run:
-	./chopsticks
+cli:
+	./chopsticks cli
 
-build-and-run: build
-	$(MAKE) run
+build-and-cli: build
+	$(MAKE) cli
+
+serve:
+	./chopsticks serve
+
+build-and-serve: build
+	$(MAKE) serve

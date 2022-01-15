@@ -14,13 +14,7 @@ const INFO bool = true
 
 func main() {
   app := &cli.App{
-    Flags: []cli.Flag {
-      &cli.BoolFlag{
-        Name: "dump-state",
-        Usage: "language for the greeting",
-      },
-    },
-    Commands: []*cli.Command{
+    Commands: []cli.Command{
       {
         Name:    "cli",
         Aliases: []string{"c"},
@@ -36,9 +30,7 @@ func main() {
             fmt.Println("Error when solving: " + solveErr.Error())
             return nil
           }
-          if c.Bool("dump-state") {
-            fmt.Println(stateNode.toTreeString(9999))
-          }
+
           fmt.Println("Let's play a game of chopsticks! You be Player 1.")
           gs.prettyPrint()
 
@@ -79,10 +71,20 @@ func main() {
         Aliases: []string{"s"},
         Usage:   "play chopsticks with a browser",
         Action:  func(c *cli.Context) error {
+          gs := initGame()
+          start := time.Now()
+          var _, visitedStates, _, _, err = solve(gs, DEFAULT_MAX_DEPTH)
+          if err != nil {
+            return err
+          }
+          duration := time.Since(start)
+          fmt.Println("Computed solve state in:") // 10s of ms, hot damn golang is fast
+          fmt.Println(duration)
+          serve(gs, visitedStates)
           return nil
         },
       },
-
+    },
   }
 
   err := app.Run(os.Args)
