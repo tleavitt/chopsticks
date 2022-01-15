@@ -128,11 +128,11 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 
 // Note: mutates state
 func (gs *gameState) playMove(m move) (*gameState, error) {
-	return gs.playTurn(m.playHand, m.receiveHand)
+	return gs.playTurn(m.playerHand, m.receiverHand)
 }
 
 func (gs *gameState) isMoveValid(m move) bool {
-	return gs.getPlayer().getHand(m.playHand) != 0 && gs.getReceiver().getHand(m.receiveHand) != 0
+	return gs.getPlayer().getHand(m.playerHand) != 0 && gs.getReceiver().getHand(m.receiverHand) != 0
 }
 
 func initGame() *gameState {

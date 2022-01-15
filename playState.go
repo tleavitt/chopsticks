@@ -80,18 +80,18 @@ func getGameHandForNormalizedMoveAndPlayers(moveHand Hand, gamePlayer player, no
 
 
 func (gps *gamePlayState) getNormalizedMoveForGameMove(gameMove move) (move, error) {
-	normalizedPlayerHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.playHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
+	normalizedPlayerHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.playerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
 	if err != nil { return gameMove, err }
-	normalizedReceiverHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.receiveHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
+	normalizedReceiverHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.receiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
 	if err != nil { return gameMove, err }
 	return move{normalizedPlayerHand, normalizedReceiverHand}, nil
 }
 
 // TODO: DRY?
 func (gps *gamePlayState) getGameMoveForNormalizedMove(normalizedMove move) (move, error) {
-	gamePlayerHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.playHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
+	gamePlayerHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.playerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
 	if err != nil { return normalizedMove, err }
-	gameReceiverHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.receiveHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
+	gameReceiverHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.receiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
 	if err != nil { return normalizedMove, err }
 	return move{gamePlayerHand, gameReceiverHand}, nil
 }

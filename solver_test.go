@@ -94,7 +94,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
     }
 
     // Check that applying the move to the current node state gives you the state in the next node
-    playState, err := node.gs.copyAndPlayTurn(nextMove.playHand, nextMove.receiveHand) 
+    playState, err := node.gs.copyAndPlayTurn(nextMove.playerHand, nextMove.receiverHand) 
     if err != nil {
       t.Fatal(err.Error())
     }

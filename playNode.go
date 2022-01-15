@@ -9,12 +9,12 @@ import (
 
 // ==== Move ==== 
 type move struct {
-  playHand Hand
-  receiveHand Hand
+  playerHand Hand
+  receiverHand Hand
 }
 
 func (m *move) toString() string {
-  return toString(m.playHand) + " -> " + toString(m.receiveHand)
+  return toString(m.playerHand) + " -> " + toString(m.receiverHand)
 }
 
 func normalizeHandForPlayer(h Hand, p *player) Hand {
