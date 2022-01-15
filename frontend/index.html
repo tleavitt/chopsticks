@@ -38,6 +38,7 @@
 
     <script>
       // Models
+      const NUM_FINGERS = 5
       class Player {
         constructor(lh, rh) {
           this.lh = lh;
@@ -112,13 +113,40 @@
         }
       }
 
-      class MoveQueue {
+      class MoveController {
         constructor() {
           this.lastPendingMove = null;
         }
+        euqueueMove() {
+
+        }
       }
 
+      const FINGERS_TO_X_TRANSLATE_PX {
+        1: 370,
+        2: 200,
+        3: 0,
+        4
+      }
+
+
       // Controllers
+      function applyMove(gs, sel) {
+        // Given the current game state and move,
+        // apply the move to the gamestate and update the UI
+        // Returns the new game state
+        player = gs.turn == "p1" ? gs.player1 : gs.player2
+        receiver = gs.turn == "p1" ? gs.player2 : gs.player1
+        receiverStr = invertPlayer(gs.turn)
+
+        playerHand = player[sel.getPlayerHand()]
+        receiverHand = receiver[sel.getReceiverHand()]
+        receiver[sel.getReceiverHand()] = (playerHand + receiverHand) % NUM_FINGERS
+
+        // Increment the turn
+        gs.turn = invertPlayer(gs.turn)
+      }
+
       function disableClicksForHand(ph) {
         const container = document.getElementById(ph + "-container");
         const img = document.getElementById(ph);
