@@ -2,43 +2,270 @@
 <html>
   <head>
     <title>Chopsticks</title>
-    <script src="https://unpkg.com/vue"></script>
   </head>
   <body>
-    <div id="app">
-     <div class="container">
-        <div class="grid-outer">
-          <div class="grid-inner p2lh-container">
-            <img class="p2lh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+    <div>
+      <div id="header">
+        <p>Let's play chopsticks. You go first</p>
+      </div>
+      <div id="app">
+       <div class="container">
+          <div class="grid-outer">
+            <div id="p2lh-container" class="grid-inner">
+              <img id="p2lh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+            </div>
           </div>
-        </div>
-        <div class="grid-outer">
-          <div class="grid-inner p2rh-container">
-            <img class="p2rh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          <div class="grid-outer">
+            <div id="p2rh-container" class="grid-inner">
+              <img id="p2rh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+            </div>
           </div>
-        </div>
-        <div class="grid-outer">
-          <div class="grid-inner p1lh-container">
-            <img class="p1lh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          <div class="grid-outer">
+            <div id="p1lh-container" class="grid-inner">
+              <img id="p1lh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+            </div>
           </div>
-        </div>
-        <div class="grid-outer">
-          <div class="grid-inner p1rh-container">
-            <img class="p1rh" src="/static/hands.png" style="transform: translate(370px, 0px)">
+          <div class="grid-outer">
+            <div id="p1rh-container" class="grid-inner">
+              <img id="p1rh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+            </div>
           </div>
-        </div>
-      </div> 
+        </div> 
+      </div>
     </div>
+    <img class="img-cache" src="/static/hands_green.png">
+    <img class="img-cache" src="/static/hands_red.png">
 
     <script>
-      var app = new Vue({
-        el: "#app",
-        data: {
-          message: "Hello world!"
+      // Models
+      class Player {
+        constructor(lh, rh) {
+          this.lh = lh;
+          this.rh = rh;
         }
-      });
+        toObj() {
+          return {
+            "lh": this.lh.value,
+            "rh": this.hh.value,
+          };
+        }
+      }
+
+      class GameState {
+        constructor(p1, p2, turn) {
+          this.p1 = p1;
+          this.p2 = p2;
+          this.turn = turn;
+        } 
+        toObj() {
+          return {
+            "player1": this.p1.toObj(),
+            "player2": this.p2.toObj(),
+            "turn": this.turn,
+          };
+        }
+      }
+
+      class Selection {
+        constructor() {
+          this.playerHand = null;
+          this.receiverHand = null;
+        }
+
+        getPlayerHand() {
+          return this.playerHand;
+        }
+        getReceiverHand() {
+          return this.receiverHand;
+        }
+
+        setPlayerHand(ph) {
+          this.playerHand = ph;
+        }
+
+        setReceiverHand(rh) {
+          this.receiverHand = rh;
+        }
+
+        toObj() {
+          return {
+            "playerHand": this.getPlayerHand(),
+            "receiverHand": this.getReceiverHand(),
+          };
+        }
+      }
+
+      // Global state for everything
+      class State {
+        constructor(gs, sel) {
+          this.gs = gs;
+          this.sel = sel;
+        }
+        toObj() {
+          return {
+            "gs": this.gs,
+            "move": this.sel,
+          }
+        }
+        toJson() {
+          return JSON.stringify(this.toObj())
+        }
+      }
+
+      // Controllers
+      function disableClicksForHand(ph) {
+        const container = document.getElementById(ph + "-container");
+        const img = document.getElementById(ph);
+        container.style.cursor = "not-allowed";
+        img.style.pointerEvents = "none";
+      }
+
+      function enableClicksForHand(ph) {
+        const container = document.getElementById(ph + "-container");
+        const img = document.getElementById(ph);
+        container.style.cursor = "pointer";
+        img.style.pointerEvents = null;
+      }
+
+      function disableClicksForPlayer(p) {
+        disableClicksForHand(p + "rh");
+        disableClicksForHand(p + "lh")
+      }
+
+      function enableClicksForPlayer(p) {
+        enableClicksForHand(p + "rh");
+        enableClicksForHand(p + "lh")
+      }
+
+      function invertPlayer(p) {
+        if (p === "p1") {
+          return "p2";
+        } else {
+          return "p1";
+        }
+      }
+
+
+      // Highlights the hand green
+      function selectPlayerHand(p, h) {
+        // p: string, player name (p1 or p2)
+        // h: string, hand name (lh or rh)
+        const img = document.getElementById(p + h);
+        img.src = "/static/hands_green.png"
+      }
+
+      // Highlights the hand red
+      function selectReceiverHand(p, h) {
+        // p: string, player name (p1 or p2)
+        // h: string, hand name (lh or rh)
+        const img = document.getElementById(p + h);
+        img.src = "/static/hands_red.png"
+      }
+
+      // Removes highlighting from a hand.
+      function deselectHand(p, h) {
+        // p: string, player name (p1 or p2)
+        // h: string, hand name (lh or rh)
+        const img = document.getElementById(p + h);
+        img.src = "/static/hands.png"
+      }
+
+
+      // For now just select the hand.
+      function addPlayerClickListener(p, h, sel) {
+        const elem = document.getElementById(p + h);
+
+        elem.addEventListener('click', event => {
+          // If NO hand selected, enable selecting the opponents hand.
+          if (!sel.getPlayerHand()) {
+            enableClicksForPlayer(invertPlayer(p));
+          } else if (sel.getPlayerHand() !== h) {
+            // If other hand is selected, deselect it.
+            deselectHand(p, sel.getPlayerHand());
+          }
+          selectPlayerHand(p, h)
+          sel.setPlayerHand(h)
+        });
+
+      }
+
+      function addReceiverClickListener(p, h, state) {
+        const elem = document.getElementById(p + h);
+
+        elem.addEventListener('click', event => {
+          const sel = state.sel;
+          if (!!sel.getReceiverHand() && sel.getReceiverHand() !== h) {
+            // If other hand is selected, deselect it.
+            deselectHand(p, sel.getReceiverHand());
+          }
+          selectReceiverHand(p, h)
+          sel.setReceiverHand(h)
+          submitMove(state);
+        });
+      }
+
+      // Example POST method implementation:
+      async function postData(url, data) {
+        // Default options are marked with *
+        const response = await fetch(url, {
+          method: 'POST', // *GET, POST, PUT, DELETE, etc.
+          mode: 'cors', // no-cors, *cors, same-origin
+          credentials: 'same-origin', // include, *same-origin, omit
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data) // body data type must match "Content-Type" header
+        });
+        return response.json(); // parses JSON response into native JavaScript objects
+      }
+
+      function submitMove(state) {
+        postData("/move", state.toJson()).then(resp => {
+          console.log("Got response: " + resp);
+        })
+      }
+
+      // Initialize UI state
+      function initUiForPlayer(state) {
+        addPlayerClickListener("p1", "lh", state.sel)
+        addPlayerClickListener("p1", "rh", state.sel)
+        addReceiverClickListener("p2", "lh", state)
+        addReceiverClickListener("p2", "rh", state)
+
+        enableClicksForPlayer("p1")
+        disableClicksForPlayer("p2")
+      }
+
+      function init() {
+        // Current global game state
+        const gs = new GameState(
+          new Player( 1, 1),
+          new Player( 1, 1),
+          "p1"
+        );
+
+        const sel = new Selection();
+        const state = new State(gs, sel);
+
+        initUiForPlayer(state);
+
+        return state;
+      }
+
+
+      function run() {
+        const state = init();
+      }
+
+      run();
     </script>
     <style>
+      .img-cache {
+        display: none;
+      }
+      #header {
+        margin-left: 100px;
+      }
       .container {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -60,15 +287,15 @@
         overflow: hidden
       }
       /* Player 2*/ 
-      .p2lh-container {
+      #p2lh-container {
        transform: rotate(180deg) ;
       }
 
-      .p2rh-container {
+      #p2rh-container {
        transform: scaleX(-1) rotate(180deg) ;
       }
       /* Player 1 */ 
-      .p1lh-container {
+      #p1lh-container {
        transform:  scaleX(-1);
       }
     </style>
