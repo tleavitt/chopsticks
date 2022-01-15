@@ -152,7 +152,11 @@ func main() {
     },
     Action: func(c *cli.Context) error {
       gs := initGame()
+      start := time.Now()
       var stateNode, _, _, _, solveErr = solve(gs, DEFAULT_MAX_DEPTH)
+      duration := time.Since(start)
+      fmt.Println("Computed solve state in:") // 10s of ms, hot damn golang is fast
+      fmt.Println(duration)
       if solveErr != nil {
         fmt.Println("Error when solving: " + solveErr.Error())
         return nil
