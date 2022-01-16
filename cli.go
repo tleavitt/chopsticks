@@ -34,13 +34,13 @@ func stringInputToHand(i string) (Hand, error) {
   }
 }
 
-func dumpTurnInfo(gsAfterPlay *GameState, nodeAfterPlay *PlayNode, nodeBeforePlay *PlayNode, guiMove move, normalizedMove move) error {
+func dumpTurnInfo(gsAfterPlay *GameState, nodeAfterPlay *PlayNode, nodeBeforePlay *PlayNode, guiMove Move, normalizedMove Move) error {
    normalizedAfter := gsAfterPlay.copyAndNormalize()
     if !normalizedAfter.equals(nodeAfterPlay.gs) {
       return errors.New(fmt.Sprintf("Normalized GUI game state and solve tree game state do not match: %+v, %+v", normalizedAfter, nodeAfterPlay.gs))
     }
     fmt.Println("== Begin turn info dump ==")
-    fmt.Printf("previous node: %s\ncurrent node: %s\nnormalized move: %+v, gui move: %+v\n", nodeBeforePlay.toTreeString(1), nodeAfterPlay.toTreeString(1), normalizedMove, guiMove) 
+    fmt.Printf("previous node: %s\ncurrent node: %s\nnormalized Move: %+v, gui Move: %+v\n", nodeBeforePlay.toTreeString(1), nodeAfterPlay.toTreeString(1), normalizedMove, guiMove) 
     fmt.Println("== End turn info dump ==")
     return nil
 }
@@ -58,7 +58,7 @@ func runPlayerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
   fmt.Println("Your turn.")
   fmt.Println("What would you like to play?")
 
-  // Player move
+  // Player Move
   var playerMoveStr string
   // Format: LH RH 
   fmt.Scanln(&playerMoveStr)
@@ -78,7 +78,7 @@ func runPlayerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
     return curNode, nil
   }
 
-  playerMove := move{playerHand, receiverHand}
+  playerMove := Move{playerHand, receiverHand}
   if !gps.state.isMoveValid(playerMove) {
     // Print an error message and don't advance state.
     fmt.Println("You can't do that, hands with zero fingers are out of play.")
@@ -95,7 +95,7 @@ func runPlayerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
   // NOTE: nodeAfterPlayer.gs and gsAfterPlayer may not be equal due to normalization differences, but they should
   // be equal after normalizing
   if !okP {
-    return curNode, errors.New(fmt.Sprintf("Normalized player move not found in curNode: %+v", curNode))
+    return curNode, errors.New(fmt.Sprintf("Normalized Player Move not found in curNode: %+v", curNode))
   }
   if DEBUG {
       if err := dumpTurnInfo(gps.state, nodeAfterPlayer, curNode, playerMove, normalizedPlayerMove); err != nil {
@@ -108,8 +108,8 @@ func runPlayerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
 
 
 func runComputerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
-  // Computer move
-  // Need to normalize the guiGs in order to map the best move onto the current GUI
+  // Computer Move
+  // Need to normalize the guiGs in order to map the best Move onto the current GUI
   normalizedComputerMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(DEBUG, true) // TODO: don't allow unscored child?
   if err != nil {
     return curNode, err
@@ -124,7 +124,7 @@ func runComputerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
 
   nodeAfterComputer, okC := curNode.nextNodes[normalizedComputerMove]
   if !okC {
-    return curNode, errors.New(fmt.Sprintf("Computer move not found in curNode: %+v", curNode))
+    return curNode, errors.New(fmt.Sprintf("Computer Move not found in curNode: %+v", curNode))
   }
   if DEBUG {
     if err := dumpTurnInfo(gps.state, nodeAfterComputer, curNode, guiComputerMove, normalizedComputerMove); err != nil {

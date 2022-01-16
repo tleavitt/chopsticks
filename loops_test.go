@@ -7,8 +7,8 @@ import (
 
 func TestLoopsSimple(t *testing.T) {
   fmt.Println("starting TestSimpleLoops")
-  gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
-  gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
+  gs1 := &GameState{Player{1, 1,}, Player{1, 2,}, Player1,}
+  gs2 := &GameState{Player{1, 1,}, Player{2, 2,}, Player2,}
   loops := [][]*PlayNode{
     []*PlayNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1)},
     []*PlayNode{createPlayNodeCopyGs(gs2), createPlayNodeCopyGs(gs2)},
@@ -58,7 +58,7 @@ func assertParentChild(parent *loopNode, child *loopNode, t *testing.T) {
 
 func TestLoopsInterlinked(t *testing.T) {
   fmt.Println("starting TestLoopsInterlinked")
-  gs := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
+  gs := &GameState{Player{1, 1,}, Player{1, 2,}, Player1,}
   commonNode1 := createPlayNodeCopyGs(gs)
   commonNode2 := createPlayNodeCopyGs(gs)
 

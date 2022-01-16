@@ -8,18 +8,18 @@ import (
 )
 
 // ==== Move ==== 
-type move struct {
-  playerHand Hand
-  receiverHand Hand
+type Move struct {
+  PlayerHand Hand
+  ReceiverHand Hand
 }
 
-func (m *move) toString() string {
-  return toString(m.PlayerHand) + " -> " + toString(m.receiverHand)
+func (m *Move) toString() string {
+  return toString(m.PlayerHand) + " -> " + toString(m.ReceiverHand)
 }
 
 func normalizeHandForPlayer(h Hand, p *Player) Hand {
   if p.isEliminated() {
-    fmt.Println("Warning: normalizing hand for eliminated player")
+    fmt.Println("Warning: normalizing hand for eliminated Player")
   }
   if p.Lh == p.Rh {
     return Left
@@ -31,15 +31,15 @@ func normalizeHandForPlayer(h Hand, p *Player) Hand {
 
 // ==== PlayNode ==== 
 
-// want: tree of optimal moves given the current move
+// want: tree of optimal Moves given the current Move
 type PlayNode struct {
   gs *GameState
   score float32 // +1 means Player1 wins, -1 means Player2 wins
   // Children nodes
-  nextNodes map[move]*PlayNode
+  nextNodes map[Move]*PlayNode
   // Parent nodes
-  // NOTE: this has to be a gameState map because there can be multiple distinct
-  // parent states that lead to the same child state with the same move. Example:
+  // NOTE: this has to be a GameState map because there can be multiple distinct
+  // parent states that lead to the same child state with the same Move. Example:
   // {{3, 3}, {0, 2}, Player2} - {Left, Right} -> {{1, 3}, {0, 2} Player1}
   // {{1, 1}, {0, 2}, Player2} - {Left, Right} -> {{1, 3}, {0, 2} Player1}
   prevNodes map[GameState]*PlayNode
@@ -51,7 +51,7 @@ type PlayNode struct {
 }
 
 // Go needs generics dammit
-func nodeMoveMapToString(nodeMap map[move]*PlayNode) string {
+func nodeMoveMapToString(nodeMap map[Move]*PlayNode) string {
   var sb strings.Builder
   sb.WriteString("{")
   for m, n := range nodeMap {
@@ -74,13 +74,13 @@ func nodeStateMapToString(nodeMap map[GameState]*PlayNode) string {
 // Construction
 // ALWAYS copies the gamestate
 func createPlayNodeCopyGs(gs *GameState) *PlayNode {
-  node := &PlayNode{gs.copyAndNormalize(), 0, make(map[move]*PlayNode), make(map[GameState]*PlayNode), false, []*loopNode{}} 
+  node := &PlayNode{gs.copyAndNormalize(), 0, make(map[Move]*PlayNode), make(map[GameState]*PlayNode), false, []*loopNode{}} 
   return node
 }
 
 // REUSES the gamestate, AND MUTATES THE ARGUMENT
 func createPlayNodeReuseGs(gs *GameState) *PlayNode {
-  node := &PlayNode{gs, 0, make(map[move]*PlayNode), make(map[GameState]*PlayNode), false, []*loopNode{}} 
+  node := &PlayNode{gs, 0, make(map[Move]*PlayNode), make(map[GameState]*PlayNode), false, []*loopNode{}} 
   // MUTATES THE ARGUMENT
   node.gs.normalize()
   return node
@@ -88,11 +88,11 @@ func createPlayNodeReuseGs(gs *GameState) *PlayNode {
 
 // Scores
 // Note: the node must not be a leaf (i.e. it must have children) or this function will fail
-func getBestMoveAndScoreForCurrentPlayer(childNodes map[move]*PlayNode, log bool, allowUnscoredChild bool) (move, float32, error) {
-  // Our best move is the move that puts our opponent in the worst position.
-  // The score of the current node is the negative of the score of our opponent in the node after our best move.
+func getBestMoveAndScoreForCurrentPlayer(childNodes map[Move]*PlayNode, log bool, allowUnscoredChild bool) (Move, float32, error) {
+  // Our best Move is the Move that puts our opponent in the worst position.
+  // The score of the current node is the negative of the score of our opponent in the node after our best Move.
   var worstNextScoreForOpp float32 = 2 // This is an impossible score, so we should always trigger an update in the loop.
-  var bestMoveForUs move // This should always get updated.
+  var bestMoveForUs Move // This should always get updated.
 
   for nextMove, nextNode := range childNodes {
 
@@ -105,7 +105,7 @@ func getBestMoveAndScoreForCurrentPlayer(childNodes map[move]*PlayNode, log bool
     }
     if oppScore < worstNextScoreForOpp {
       worstNextScoreForOpp = oppScore
-      // Tricky bug! next move gets reused within the for loop, need to copy. Don't use pointers here.
+      // Tricky bug! next Move gets reused within the for loop, need to copy. Don't use pointers here.
       bestMoveForUs = nextMove
       if log {
         fmt.Printf("--- Update triggered, new worstNextScoreForOpp: %f, new bestMoveForUs %+v\n", worstNextScoreForOpp, bestMoveForUs)
@@ -113,7 +113,7 @@ func getBestMoveAndScoreForCurrentPlayer(childNodes map[move]*PlayNode, log bool
     }
   }
   if worstNextScoreForOpp > 1 || worstNextScoreForOpp < -1 {
-    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScoreForCurrentPlayer: no best move found, worst next score for opp: %f", worstNextScoreForOpp))
+    return bestMoveForUs, 0, errors.New(fmt.Sprintf("getBestMoveAndScoreForCurrentPlayer: no best Move found, worst next score for opp: %f", worstNextScoreForOpp))
   } else {
     // Note the negative sign!! worst score for opp is the best score for us.
     if log {
@@ -123,7 +123,7 @@ func getBestMoveAndScoreForCurrentPlayer(childNodes map[move]*PlayNode, log bool
   }
 }
 
-func (node *PlayNode) getBestMoveAndScoreForCurrentPlayer(log bool, allowUnscoredChild bool) (move, float32, error) {
+func (node *PlayNode) getBestMoveAndScoreForCurrentPlayer(log bool, allowUnscoredChild bool) (Move, float32, error) {
   if log {
     fmt.Printf("-- Running getBestMoveAndScoreForCurrentPlayer() for %+v\n", node.gs)
   }
@@ -137,7 +137,7 @@ func (node *PlayNode) computeScore(allowUnscoredChild bool) (float32, error) {
     // Determine the score directly
     return node.getHeuristicScore(), nil
   } else {
-    // Compute the score based on child moves. 
+    // Compute the score based on child Moves. 
     _, scoreForCurrentPlayer, err := node.getBestMoveAndScoreForCurrentPlayer(false, allowUnscoredChild)
     if err != nil {
       return 0, err
@@ -190,7 +190,7 @@ func (node *PlayNode) getHeuristicScore() float32 {
 
   if p1Heuristic == -1 {
     if p2Heuristic == -1 {
-      // This is an invalid state where both players are eliminated, but we don't have to modify the heuristics. just return 0
+      // This is an invalid state where both Players are eliminated, but we don't have to modify the heuristics. just return 0
       return 0
     } else {
       // p2 wins, return -1
@@ -219,17 +219,17 @@ func turnToSign(t Turn) float32 {
   }
 }
 
-// Flips the sign for player 2 scores
+// Flips the sign for Player 2 scores
 func scoreForPlayerToAbsoluteScore(score float32, turn Turn) float32 {
   return turnToSign(turn) * score
 }
 
-// For this function, +1 means the current player (i.e. the player whose turn it is) is winning, -1 means losing.
+// For this function, +1 means the current Player (i.e. the Player whose turn it is) is winning, -1 means losing.
 func (node *PlayNode) scoreForCurrentPlayer() float32 {
   return turnToSign(node.gs.T) * node.score
 }
 
-// Terminal states have one of the players eliminated; the game is over and no new moves are possible.
+// Terminal states have one of the Players eliminated; the game is over and no new Moves are possible.
 func (node *PlayNode) isTerminal() bool {
   return node.gs.Player1.isEliminated() || node.gs.Player2.isEliminated()
 }
@@ -272,8 +272,8 @@ func (node *PlayNode) toStringImpl(curDepth int, maxDepth int, printedStates map
   return sb.String()
 }
 
-// Returns the move that takes the map to the given node, or nil if the given node is not a value in the map.
-func findNodeInMap(node *PlayNode, nodeMap map[move]*PlayNode) *move {
+// Returns the Move that takes the map to the given node, or nil if the given node is not a value in the map.
+func findNodeInMap(node *PlayNode, nodeMap map[Move]*PlayNode) *Move {
   for m, n := range nodeMap {
     if n == node {
       return &m
@@ -282,12 +282,12 @@ func findNodeInMap(node *PlayNode, nodeMap map[move]*PlayNode) *move {
   return nil
 }
 
-func addParentChildEdges(parent *PlayNode, child *PlayNode, m move) {
+func addParentChildEdges(parent *PlayNode, child *PlayNode, m Move) {
   addParentEdge(parent, child, m)
   addChildEdge(parent, child)
 }
 
-func addParentEdge(parent *PlayNode, child *PlayNode, m move) {
+func addParentEdge(parent *PlayNode, child *PlayNode, m Move) {
   parent.nextNodes[m] = child 
 }
 

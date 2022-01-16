@@ -8,23 +8,23 @@ import (
 
 type GameState struct {
 	// NOTE: don't make these pointers, otherwise copying and keying doesn't work.
-	Player1 player
-	Player2 player
-	turn Turn // Turn indicates who the player is vs the receiver
+	Player1 Player
+	Player2 Player
+	T Turn // Turn indicates who the Player is vs the receiver
 }
 
 func (gs *GameState) equals(other *GameState) bool {
 	return gs.Player1 == other.Player1 && gs.Player2 == other.Player2 && gs.T == other.T
 }
 
-// Maintain that the player hands are in sorted order (smallest hand first)
+// Maintain that the Player hands are in sorted order (smallest hand first)
 func (gs *GameState) normalize() *GameState {
   gs.Player1.normalize() 
   gs.Player2.normalize() 
   return gs
 }
 
-func (gs gameState) copyAndNormalize() *GameState {
+func (gs GameState) copyAndNormalize() *GameState {
 	return gs.normalize()
 }
 
@@ -33,7 +33,7 @@ func (gs *GameState) isNormalized() bool {
 }
 
 
-func (gs gameState) copyAndDenormalize(swapPlayer1 bool, swapPlayer2 bool) *GameState {
+func (gs GameState) copyAndDenormalize(swapPlayer1 bool, swapPlayer2 bool) *GameState {
 	if swapPlayer1 {
 		gs.Player1.Rh, gs.Player1.Lh = gs.Player1.Lh, gs.Player1.Rh
 	}
@@ -59,7 +59,7 @@ func (gs *GameState) getReceiver() *Player {
 	}
 }
 
-// Update the turn variable and swap the players
+// Update the turn variable and swap the Players
 func (gs *GameState) incrementTurn() *GameState {
 	if gs.T == Player1 {
 		 gs.T = Player2
@@ -127,18 +127,18 @@ func (gs *GameState) playTurn(playerHand Hand, receiverHand Hand) (*GameState, e
 }
 
 // Note: mutates state
-func (gs *GameState) playMove(m move) (*GameState, error) {
-	return gs.playTurn(m.PlayerHand, m.receiverHand)
+func (gs *GameState) playMove(m Move) (*GameState, error) {
+	return gs.playTurn(m.PlayerHand, m.ReceiverHand)
 }
 
-func (gs *GameState) isMoveValid(m move) bool {
-	return gs.getPlayer().getHand(m.PlayerHand) != 0 && gs.getReceiver().getHand(m.receiverHand) != 0
+func (gs *GameState) isMoveValid(m Move) bool {
+	return gs.getPlayer().getHand(m.PlayerHand) != 0 && gs.getReceiver().getHand(m.ReceiverHand) != 0
 }
 
 func initGame() *GameState {
-	return &gameState{
-		player{1, 1},	
-		player{1, 1},	
+	return &GameState{
+		Player{1, 1},	
+		Player{1, 1},	
 		Player1,	
 	}	
 }

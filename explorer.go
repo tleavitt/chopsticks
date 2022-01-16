@@ -41,7 +41,7 @@ func copyPath(path []*PlayNode) []*PlayNode {
 
 type exploreCandidate struct {
   pn *PlayNode
-  moveToPn *move
+  moveToPn *Move
   heuristic float32
 }
 
@@ -94,13 +94,13 @@ func exploreStatesImpl(curNode *PlayNode, curPath []*PlayNode, visitedStates map
     leaves[curNode] = copyPath(curPath)
     return curNode, leaves, loops, nil
   }
-  // Otherwise, iterate over all possible moves
+  // Otherwise, iterate over all possible Moves
 
-  // Micro-opt: recurse on the best nodes for the next player first, according to their heuristic
+  // Micro-opt: recurse on the best nodes for the next Player first, according to their heuristic
   exploreCandidates := []*exploreCandidate{}
   for _, playerHand := range curNode.gs.getPlayer().getDistinctPlayableHands() {
     for _, receiverHand := range curNode.gs.getReceiver().getDistinctPlayableHands()  {
-      curMove := move{playerHand, receiverHand}  
+      curMove := Move{playerHand, receiverHand}  
 
       // Make sure the gamestate gets copied....
       nextState, err := curNode.gs.copyAndPlayTurn(playerHand, receiverHand)
@@ -114,7 +114,7 @@ func exploreStatesImpl(curNode *PlayNode, curPath []*PlayNode, visitedStates map
       })
     }
   }
-  // Sort next nodes by decreasing heuristic (i.e. best nodes for next player first)
+  // Sort next nodes by decreasing heuristic (i.e. best nodes for next Player first)
   sort.Slice(exploreCandidates, func(i, j int) bool {
     return exploreCandidates[i].heuristic > exploreCandidates[j].heuristic
   })
@@ -137,13 +137,13 @@ func exploreStatesImpl(curNode *PlayNode, curPath []*PlayNode, visitedStates map
       }
       addParentChildEdges(curNode, existingNode, *curMove)
       if DEBUG {
-        fmt.Printf(fmt.Sprintf("++ Found intersection in move tree, not exploring further. cur node: %s, loop move: %+v, next node: %s\n", curNode.toString(), curMove, existingNode.toString()))
+        fmt.Printf(fmt.Sprintf("++ Found intersection in Move tree, not exploring further. cur node: %s, loop Move: %+v, next node: %s\n", curNode.toString(), curMove, existingNode.toString()))
       }
       // Check for loops
       if loopIdx := findNodeInPath(existingNode, curPath); loopIdx != -1 {
         curLoop := copyPath(curPath[loopIdx:])
         if DEBUG {
-          fmt.Printf("++++ Found LOOP in move tree, saving loop for later: %+v\n", curLoop)
+          fmt.Printf("++++ Found LOOP in Move tree, saving loop for later: %+v\n", curLoop)
         }
         loops = append(loops, curLoop)
       }

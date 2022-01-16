@@ -31,7 +31,7 @@ func solveRetryable(curNode *PlayNode, curPath []*PlayNode, visitedStates map[Ga
     return nil, nil, nil, nil, err
   }
   if INFO {
-    fmt.Println(fmt.Sprintf("Generated move tree with %d nodes (%d leaves, %d loops)", len(visitedStates), len(leaves), len(loops)))
+    fmt.Println(fmt.Sprintf("Generated Move tree with %d nodes (%d leaves, %d loops)", len(visitedStates), len(leaves), len(loops)))
 
     minLeaf, minPath := getShallowestLeaf(leaves)
     fmt.Printf("Shallowest leaf: %+v (%+v)\n", minLeaf, minPath)
@@ -85,7 +85,7 @@ func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[Ga
       }
       break
     }
-    // Sort next nodes by decreasing score for current player (i.e. best nodes for next player first)
+    // Sort next nodes by decreasing score for current Player (i.e. best nodes for next Player first)
     sort.Slice(solveCandidates, func(i, j int) bool {
       return solveCandidates[i].root.scoreForCurrentPlayer() > solveCandidates[j].root.scoreForCurrentPlayer()
     }) 
@@ -107,7 +107,7 @@ func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[Ga
       if err != nil {
         return nil, nil, nil, err
       }
-      // TODO: need to find best leaf for each player here
+      // TODO: need to find best leaf for each Player here
       // New candidates are "frontier leaves" i.e. leaves that aren't in our visited states map.
       for leaf, path := range leaves {
         nextSolveCandidates = append(nextSolveCandidates, &SolveCandidate{leaf, path,})
@@ -118,7 +118,7 @@ func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[Ga
       solidifyScores(root, math.MaxInt32)
     }
 
-    // TODO: add alpha beta pruning here? remove the not-best nodes for each player?? 
+    // TODO: add alpha beta pruning here? remove the not-best nodes for each Player?? 
     solveCandidates = nextSolveCandidates
   }
 

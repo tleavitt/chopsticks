@@ -73,14 +73,14 @@
       class Selection {
         constructor() {
           this.PlayerHand = null;
-          this.receiverHand = null;
+          this.ReceiverHand = null;
         }
 
         getPlayerHand() {
           return this.PlayerHand;
         }
         getReceiverHand() {
-          return this.receiverHand;
+          return this.ReceiverHand;
         }
 
         setPlayerHand(ph) {
@@ -88,7 +88,7 @@
         }
 
         setReceiverHand(rh) {
-          this.receiverHand = rh;
+          this.ReceiverHand = rh;
         }
 
         toObj() {
@@ -133,14 +133,14 @@
 
       // Controllers
       function applyMove(gs, sel) {
-        // Given the current game state and move,
-        // apply the move to the gamestate and update the UI
+        // Given the current game state and Move,
+        // apply the Move to the gamestate and update the UI
         // Returns the new game state
-        player = gs.T == "p1" ? gs.Player1 : gs.Player2
+        Player = gs.T == "p1" ? gs.Player1 : gs.Player2
         receiver = gs.T == "p1" ? gs.Player2 : gs.Player1
         receiverStr = invertPlayer(gs.T)
 
-        playerHand = player[sel.getPlayerHand()]
+        PlayerHand = Player[sel.getPlayerHand()]
         receiverHand = receiver[sel.getReceiverHand()]
         receiver[sel.getReceiverHand()] = (playerHand + receiverHand) % NUM_FINGERS
 
@@ -183,7 +183,7 @@
 
       // Highlights the hand green
       function selectPlayerHand(p, h) {
-        // p: string, player name (p1 or p2)
+        // p: string, Player name (p1 or p2)
         // h: string, hand name (lh or rh)
         const img = document.getElementById(p + h);
         img.src = "/static/hands_green.png"
@@ -191,7 +191,7 @@
 
       // Highlights the hand red
       function selectReceiverHand(p, h) {
-        // p: string, player name (p1 or p2)
+        // p: string, Player name (p1 or p2)
         // h: string, hand name (lh or rh)
         const img = document.getElementById(p + h);
         img.src = "/static/hands_red.png"
@@ -199,7 +199,7 @@
 
       // Removes highlighting from a hand.
       function deselectHand(p, h) {
-        // p: string, player name (p1 or p2)
+        // p: string, Player name (p1 or p2)
         // h: string, hand name (lh or rh)
         const img = document.getElementById(p + h);
         img.src = "/static/hands.png"

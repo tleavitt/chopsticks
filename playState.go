@@ -34,7 +34,7 @@ func createGamePlayState(state *GameState) *gamePlayState {
 	}
 }
 
-func validateGameAndNormPlayers(gamePlayer player, normalizedPlayer player) error {
+func validateGameAndNormPlayers(gamePlayer Player, normalizedPlayer Player) error {
 			// Extra safety belts
 	if !normalizedPlayer.isNormalized() {
 		return errors.New("normalizedPlayer is not normalized: " + fmt.Sprintf("%+v", normalizedPlayer))
@@ -48,58 +48,58 @@ func validateGameAndNormPlayers(gamePlayer player, normalizedPlayer player) erro
 	return nil
 }
 
-func getNormalizedHandForGameMoveAndPlayers(moveHand Hand, gamePlayer player, normalizedPlayer player) (Hand, error) {
+func getNormalizedHandForGameMoveAndPlayers(MoveHand Hand, gamePlayer Player, normalizedPlayer Player) (Hand, error) {
 	if DEBUG {
 		if err := validateGameAndNormPlayers(gamePlayer, normalizedPlayer); err != nil {
-			return moveHand, err
+			return MoveHand, err
 		}
 	}
 
-	// Two steps to denormalizing the move:
-	// If both player's hands are equal return Left -- Left and right are equivalent in this case. Normalized moves always
-	// use left and game moves can use either.
+	// Two steps to denormalizing the Move:
+	// If both Player's hands are equal return Left -- Left and right are equivalent in this case. Normalized Moves always
+	// use left and game Moves can use either.
 	if gamePlayer.Lh == gamePlayer.Rh {
 		return Left, nil
 	} else {
-		// if the game player and normalized player are not the same, swap the hand. We know that the hand had to get swapped to get here.
+		// if the game Player and normalized Player are not the same, swap the hand. We know that the hand had to get swapped to get here.
 		if gamePlayer != normalizedPlayer {
-			return moveHand.invert(), nil
+			return MoveHand.invert(), nil
 		} else {
 			// Otherwise return the same hand
-			return moveHand, nil
+			return MoveHand, nil
 		}
 	}
 }
 
 
-func getGameHandForNormalizedMoveAndPlayers(moveHand Hand, gamePlayer player, normalizedPlayer player) (Hand, error) {
-	// Wackiness: the same function actually works for both cases - this is because there are only two move hands :)
+func getGameHandForNormalizedMoveAndPlayers(MoveHand Hand, gamePlayer Player, normalizedPlayer Player) (Hand, error) {
+	// Wackiness: the same function actually works for both cases - this is because there are only two Move hands :)
 	// Normalization is it's own inverse.
-	return getNormalizedHandForGameMoveAndPlayers(moveHand, gamePlayer, normalizedPlayer)
+	return getNormalizedHandForGameMoveAndPlayers(MoveHand, gamePlayer, normalizedPlayer)
 }
 
 
-func (gps *gamePlayState) getNormalizedMoveForGameMove(gameMove move) (move, error) {
+func (gps *gamePlayState) getNormalizedMoveForGameMove(gameMove Move) (Move, error) {
 	normalizedPlayerHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.PlayerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
 	if err != nil { return gameMove, err }
-	normalizedReceiverHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.receiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
+	normalizedReceiverHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.ReceiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
 	if err != nil { return gameMove, err }
-	return move{normalizedPlayerHand, normalizedReceiverHand}, nil
+	return Move{normalizedPlayerHand, normalizedReceiverHand}, nil
 }
 
 // TODO: DRY?
-func (gps *gamePlayState) getGameMoveForNormalizedMove(normalizedMove move) (move, error) {
+func (gps *gamePlayState) getGameMoveForNormalizedMove(normalizedMove Move) (Move, error) {
 	gamePlayerHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.PlayerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
 	if err != nil { return normalizedMove, err }
-	gameReceiverHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.receiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
+	gameReceiverHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.ReceiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
 	if err != nil { return normalizedMove, err }
-	return move{gamePlayerHand, gameReceiverHand}, nil
+	return Move{gamePlayerHand, gameReceiverHand}, nil
 }
 
-func (gps *gamePlayState) applyMovesAndValidate(gameMove move, normalizedMove move) error {
-	// Apply the game move to the game state
+func (gps *gamePlayState) applyMovesAndValidate(gameMove Move, normalizedMove Move) error {
+	// Apply the game Move to the game state
 	gps.state.playMove(gameMove)
-	// Apply the normalized move to the normalized state, and then normalize
+	// Apply the normalized Move to the normalized state, and then normalize
 	gps.normalizedState.playMove(normalizedMove)
 	gps.normalizedState.normalize()
 	// Validate (always, I guess)
@@ -110,12 +110,12 @@ func (gps *gamePlayState) applyMovesAndValidate(gameMove move, normalizedMove mo
 }
 
 // Play a "game turn" on the game state, and synchronize the normalized state.
-// Return the normalized move that we applied to the normalized state (for lookups)
-func (gps *gamePlayState) playGameTurn(gameMove move) (move, error) {
+// Return the normalized Move that we applied to the normalized state (for lookups)
+func (gps *gamePlayState) playGameTurn(gameMove Move) (Move, error) {
 	if err := gps.validate(); err != nil {
 		return gameMove, err
 	}
-	// First determine the normalized move
+	// First determine the normalized Move
 	normalizedMove, err := gps.getNormalizedMoveForGameMove(gameMove)
 	if err != nil { return gameMove, err }
 	if err := gps.applyMovesAndValidate(gameMove, normalizedMove); err != nil {
@@ -125,14 +125,14 @@ func (gps *gamePlayState) playGameTurn(gameMove move) (move, error) {
 }
 
 // Play a "normalized turn" on the normalized state, and synchronize the game state.
-// Note that the normalized move operators only on the normalized state, and the corresponding "game move"
-// operates on the game state. Furthermore, the normalized state is then normalized after the move is applied.
-// Return the game move that we applied to the game state (to dispaly in the UI)
-func (gps *gamePlayState) playNormalizedTurn(normalizedMove move) (move, error) {
+// Note that the normalized Move operators only on the normalized state, and the corresponding "game Move"
+// operates on the game state. Furthermore, the normalized state is then normalized after the Move is applied.
+// Return the game Move that we applied to the game state (to dispaly in the UI)
+func (gps *gamePlayState) playNormalizedTurn(normalizedMove Move) (Move, error) {
 	if err := gps.validate(); err != nil {
 		return normalizedMove, err
 	}
-	// First determine the game move
+	// First determine the game Move
 	gameMove, err := gps.getNormalizedMoveForGameMove(normalizedMove)
 	if err != nil { return normalizedMove, err }
 	if err := gps.applyMovesAndValidate(gameMove, normalizedMove); err != nil {

@@ -67,7 +67,7 @@ func (p *Player) isNormalized() bool {
 	return p.Lh <= p.Rh
 }
 
-func (p player) copyAndNormalize() (*Player, bool) {
+func (p Player) copyAndNormalize() (*Player, bool) {
 	return p.normalize()
 }
 
@@ -97,8 +97,8 @@ var DISTINCT_HANDS []Hand = []Hand{Left, Right}
 var LEFT_HAND []Hand = []Hand{Left}
 var RIGHT_HAND []Hand = []Hand{Right}
 
-// Returns the distinct hands that a player can use to play
-// WLOG if the player can use (i.e. play or receive) either hand, they always use their left hand.
+// Returns the distinct hands that a Player can use to play
+// WLOG if the Player can use (i.e. play or receive) either hand, they always use their left hand.
 func (p *Player) getDistinctPlayableHands() []Hand {
 	if p.isEliminated() {
 		return []Hand{} // Empty slice, no hands playable 

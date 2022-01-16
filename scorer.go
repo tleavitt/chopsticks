@@ -46,7 +46,7 @@ func dequeueLoopNode(dq *DumbQueue) (*loopNode, error) {
   return ln.(*loopNode), nil
 }
 
-// Given a loop graph, find the current "most winning" node for each player in that loop.
+// Given a loop graph, find the current "most winning" node for each Player in that loop.
 func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
   bestPlayer1 := initBestNode()
   bestPlayer2 := initBestNode()
@@ -68,8 +68,8 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
       bestPlayer2.update(curScore, curNode)
     }
   }
-  // Note: at this point we may or may not have update the best scores for each player - if there are no
-  // exit nodes on a particular player's turn it will not have a best score.
+  // Note: at this point we may or may not have update the best scores for each Player - if there are no
+  // exit nodes on a particular Player's turn it will not have a best score.
   // If we haven't updated, the bestScore nodes will have a score of -2 and a bestNode of nil
   return bestPlayer1, bestPlayer2, nil
 }
@@ -79,8 +79,8 @@ func enqueueLoopParent(dq *DumbQueue, ln *loopNode) {
 }
 
 func scoreLoop(lg *loopGraph) error {
-  // Step one: find the most "winning" exit edges of the loop **for each player**.
-  //  -- winning means: best score for current player. Most winning states are +1/Player1Turn, -1/Player2Turn. If both
+  // Step one: find the most "winning" exit edges of the loop **for each Player**.
+  //  -- winning means: best score for current Player. Most winning states are +1/Player1Turn, -1/Player2Turn. If both
   //     exist we have to score both
   b1, b2, err := findMostWinningNodes(lg)
   if err != nil {
@@ -167,7 +167,7 @@ func scoreLoop(lg *loopGraph) error {
       }
     }
 
-    // Always move on to the next node in the loop.
+    // Always Move on to the next node in the loop.
     enqueueLoopParent(nodesToScore, curLoopNode)
   }
   // Step four: go over the loop one last time and give all unscored nodes a heuristic score - they're stuck in an

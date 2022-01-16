@@ -27,23 +27,23 @@ func ensureAllNodesScoredImpl(root *PlayNode, t *testing.T, visitedStates map[Ga
 func TestScorePropagateScoresSimple(t *testing.T) {
   fmt.Println("starting TestPropagateScores")
 
-  grandpa := &gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  grandpa := &GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
-  dad := &gameState{
-    player{1, 1}, player{1, 2}, Player2,
+  dad := &GameState{
+    Player{1, 1}, Player{1, 2}, Player2,
   }
-  son := &gameState{
-    player{0, 1}, player{1, 2}, Player1,
+  son := &GameState{
+    Player{0, 1}, Player{1, 2}, Player1,
   }
   grandpaNode := createPlayNodeCopyGs(grandpa)
   dadNode := createPlayNodeCopyGs(dad)
   sonNode := createPlayNodeCopyGs(son)
 
   // Wire everything up
-  addParentChildEdges(grandpaNode, dadNode, move{Left, Left})
+  addParentChildEdges(grandpaNode, dadNode, Move{Left, Left})
 
-  addParentChildEdges(dadNode, sonNode, move{Right, Left})
+  addParentChildEdges(dadNode, sonNode, Move{Right, Left})
 
   // Score
   leaves := make(map[*PlayNode][]*PlayNode, 1)
@@ -63,17 +63,17 @@ func TestScorePropagateScoresSimple(t *testing.T) {
 func TestScorePropagateScoresFork(t *testing.T) {
   fmt.Println("starting TestPropagateScoresFork")
 
-  oneS := &gameState{
-    player{1, 2}, player{1, 2}, Player1,
+  oneS := &GameState{
+    Player{1, 2}, Player{1, 2}, Player1,
   }
-  twoS := &gameState{
-    player{1, 2}, player{1, 1}, Player2,
+  twoS := &GameState{
+    Player{1, 2}, Player{1, 1}, Player2,
   }
-  twoprimeS := &gameState{
-    player{1, 2}, player{1, 5}, Player2,
+  twoprimeS := &GameState{
+    Player{1, 2}, Player{1, 5}, Player2,
   }
-  threeS := &gameState{
-    player{0, 1}, player{1, 2}, Player1,
+  threeS := &GameState{
+    Player{0, 1}, Player{1, 2}, Player1,
   }
 
   one := createPlayNodeCopyGs(oneS)
@@ -81,11 +81,11 @@ func TestScorePropagateScoresFork(t *testing.T) {
   twoprime := createPlayNodeCopyGs(twoprimeS)
   three := createPlayNodeCopyGs(threeS)
 
-  // Wire everything up, note that moves don't actually matter here.
-  addParentChildEdges(one, two, move{Right, Right})
-  addParentChildEdges(one, twoprime, move{Right, Left})
-  addParentChildEdges(two, three, move{Right, Right})
-  addParentChildEdges(twoprime, three, move{Right, Left})
+  // Wire everything up, note that Moves don't actually matter here.
+  addParentChildEdges(one, two, Move{Right, Right})
+  addParentChildEdges(one, twoprime, Move{Right, Left})
+  addParentChildEdges(two, three, Move{Right, Right})
+  addParentChildEdges(twoprime, three, Move{Right, Left})
 
   // Score
   leaves := make(map[*PlayNode][]*PlayNode, 1)
@@ -104,21 +104,21 @@ func TestScorePropagateScoresLoop1(t *testing.T) {
   fmt.Println("starting TestPropagateScoresLoop")
 
   // The three-four loop:
-  entry := &gameState{
-    player{1, 4}, player{0, 3}, Player2,
+  entry := &GameState{
+    Player{1, 4}, Player{0, 3}, Player2,
   }
   // => RH->LH
-  one := &gameState{
-    player{0, 4}, player{0, 3}, Player1,
+  one := &GameState{
+    Player{0, 4}, Player{0, 3}, Player1,
   } // All the rest are RH->RH
-  two := &gameState{
-    player{0, 4}, player{0, 2}, Player2,
+  two := &GameState{
+    Player{0, 4}, Player{0, 2}, Player2,
   }
-  three := &gameState{
-    player{0, 1}, player{0, 2}, Player1,
+  three := &GameState{
+    Player{0, 1}, Player{0, 2}, Player1,
   }
-  four := &gameState{
-    player{0, 1}, player{0, 3}, Player2,
+  four := &GameState{
+    Player{0, 1}, Player{0, 3}, Player2,
   } // Then we loop back to one
 
   entryNode := createPlayNodeCopyGs(entry)
@@ -127,12 +127,12 @@ func TestScorePropagateScoresLoop1(t *testing.T) {
   threeNode := createPlayNodeCopyGs(three)
   fourNode := createPlayNodeCopyGs(four)
 
-  // Wire everything up, note that moves don't actually matter here.
-  addParentChildEdges(entryNode, oneNode, move{Right, Left})
-  addParentChildEdges(oneNode, twoNode, move{Right, Right})
-  addParentChildEdges(twoNode, threeNode, move{Right, Right})
-  addParentChildEdges(threeNode, fourNode, move{Right, Right})
-  addParentChildEdges(fourNode, oneNode, move{Right, Right})
+  // Wire everything up, note that Moves don't actually matter here.
+  addParentChildEdges(entryNode, oneNode, Move{Right, Left})
+  addParentChildEdges(oneNode, twoNode, Move{Right, Right})
+  addParentChildEdges(twoNode, threeNode, Move{Right, Right})
+  addParentChildEdges(threeNode, fourNode, Move{Right, Right})
+  addParentChildEdges(fourNode, oneNode, Move{Right, Right})
 
   leaves := make(map[*PlayNode][]*PlayNode)
 
@@ -155,25 +155,25 @@ func TestScorePropagateScoresLoop2(t *testing.T) {
   fmt.Println("starting TestPropagateScoresLoop2")
 
   // The three-four loop:
-  entry := &gameState{
-    player{1, 4}, player{0, 3}, Player2,
+  entry := &GameState{
+    Player{1, 4}, Player{0, 3}, Player2,
   }
   // => RH->LH
-  one := &gameState{
-    player{0, 4}, player{0, 3}, Player1,
+  one := &GameState{
+    Player{0, 4}, Player{0, 3}, Player1,
   } // All the rest are RH->RH
-  two := &gameState{
-    player{0, 4}, player{0, 2}, Player2,
+  two := &GameState{
+    Player{0, 4}, Player{0, 2}, Player2,
   }
-  three := &gameState{
-    player{0, 1}, player{0, 2}, Player1,
+  three := &GameState{
+    Player{0, 1}, Player{0, 2}, Player1,
   }
-  four := &gameState{
-    player{0, 1}, player{0, 3}, Player2,
+  four := &GameState{
+    Player{0, 1}, Player{0, 3}, Player2,
   } // Then we loop back to one
 
-  exit := &gameState{
-    player{0, 1}, player{0, 0}, Player2,
+  exit := &GameState{
+    Player{0, 1}, Player{0, 0}, Player2,
   }
 
   entryNode := createPlayNodeCopyGs(entry)
@@ -183,13 +183,13 @@ func TestScorePropagateScoresLoop2(t *testing.T) {
   exitNode := createPlayNodeCopyGs(exit)
   fourNode := createPlayNodeCopyGs(four)
 
-  // Wire everything up, note that moves don't actually matter here.
-  addParentChildEdges(entryNode, oneNode, move{Right, Left})
-  addParentChildEdges(oneNode, twoNode, move{Right, Right})
-  addParentChildEdges(twoNode, threeNode, move{Right, Right})
-  addParentChildEdges(threeNode, fourNode, move{Right, Right})
-  addParentChildEdges(threeNode, exitNode, move{Right, Left})
-  addParentChildEdges(fourNode, oneNode, move{Right, Right})
+  // Wire everything up, note that Moves don't actually matter here.
+  addParentChildEdges(entryNode, oneNode, Move{Right, Left})
+  addParentChildEdges(oneNode, twoNode, Move{Right, Right})
+  addParentChildEdges(twoNode, threeNode, Move{Right, Right})
+  addParentChildEdges(threeNode, fourNode, Move{Right, Right})
+  addParentChildEdges(threeNode, exitNode, Move{Right, Left})
+  addParentChildEdges(fourNode, oneNode, Move{Right, Right})
 
   leaves := map[*PlayNode][]*PlayNode{
     exitNode: []*PlayNode{},
@@ -213,42 +213,42 @@ func TestScorePropagateScoresLoop2(t *testing.T) {
 func TestScorePropagateScoresComplex(t *testing.T) {
   fmt.Println("starting TestPropagateScoresComplex")
 
-  entry := &gameState{
-    player{1, 4}, player{0, 3}, Player2,
+  entry := &GameState{
+    Player{1, 4}, Player{0, 3}, Player2,
   }
 
-  dad := &gameState{
-    player{1, 2}, player{0, 3}, Player1,
+  dad := &GameState{
+    Player{1, 2}, Player{0, 3}, Player1,
   }
 
-  bro := &gameState{
-    player{1, 2}, player{0, 1}, Player2,
+  bro := &GameState{
+    Player{1, 2}, Player{0, 1}, Player2,
   }
 
-  sis := &gameState{
-    player{1, 2}, player{0, 2}, Player2,
+  sis := &GameState{
+    Player{1, 2}, Player{0, 2}, Player2,
   }
 
-  sis2 := &gameState{
-    player{1, 2}, player{0, 4}, Player2,
+  sis2 := &GameState{
+    Player{1, 2}, Player{0, 4}, Player2,
   }
 
   // => RH->LH
-  one := &gameState{
-    player{0, 4}, player{0, 3}, Player1,
+  one := &GameState{
+    Player{0, 4}, Player{0, 3}, Player1,
   } // All the rest are RH->RH
-  two := &gameState{
-    player{0, 4}, player{0, 2}, Player2,
+  two := &GameState{
+    Player{0, 4}, Player{0, 2}, Player2,
   }
-  three := &gameState{
-    player{0, 1}, player{0, 2}, Player1,
+  three := &GameState{
+    Player{0, 1}, Player{0, 2}, Player1,
   }
-  four := &gameState{
-    player{0, 1}, player{0, 3}, Player2,
+  four := &GameState{
+    Player{0, 1}, Player{0, 3}, Player2,
   } // Then we loop back to one
 
-  exit := &gameState{
-    player{0, 1}, player{0, 0}, Player2,
+  exit := &GameState{
+    Player{0, 1}, Player{0, 0}, Player2,
   }
 
   entryNode := createPlayNodeCopyGs(entry)
@@ -263,18 +263,18 @@ func TestScorePropagateScoresComplex(t *testing.T) {
   sisNode := createPlayNodeCopyGs(sis)
   sis2Node := createPlayNodeCopyGs(sis2)
 
-  // Wire everything up, note that moves don't actually matter here.
-  addParentChildEdges(entryNode, oneNode, move{Right, Left})
-  addParentChildEdges(oneNode, twoNode, move{Right, Right})
-  addParentChildEdges(twoNode, threeNode, move{Right, Right})
-  addParentChildEdges(threeNode, fourNode, move{Right, Right})
-  addParentChildEdges(threeNode, exitNode, move{Right, Left})
-  addParentChildEdges(fourNode, oneNode, move{Right, Right})
+  // Wire everything up, note that Moves don't actually matter here.
+  addParentChildEdges(entryNode, oneNode, Move{Right, Left})
+  addParentChildEdges(oneNode, twoNode, Move{Right, Right})
+  addParentChildEdges(twoNode, threeNode, Move{Right, Right})
+  addParentChildEdges(threeNode, fourNode, Move{Right, Right})
+  addParentChildEdges(threeNode, exitNode, Move{Right, Left})
+  addParentChildEdges(fourNode, oneNode, Move{Right, Right})
 
-  addParentChildEdges(entryNode, dadNode, move{Left, Left})
-  addParentChildEdges(dadNode, broNode, move{Left, Left})
-  addParentChildEdges(dadNode, sisNode, move{Left, Right})
-  addParentChildEdges(dadNode, sis2Node, move{Right, Left})
+  addParentChildEdges(entryNode, dadNode, Move{Left, Left})
+  addParentChildEdges(dadNode, broNode, Move{Left, Left})
+  addParentChildEdges(dadNode, sisNode, Move{Left, Right})
+  addParentChildEdges(dadNode, sis2Node, Move{Right, Left})
 
   leaves := map[*PlayNode][]*PlayNode{
     broNode: []*PlayNode{},
@@ -300,8 +300,8 @@ func TestScorePropagateScoresComplex(t *testing.T) {
 
 
 func createSimpleLoop() [][]*PlayNode {
-  gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
-  gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
+  gs1 := &GameState{Player{1, 1,}, Player{1, 2,}, Player1,}
+  gs2 := &GameState{Player{1, 1,}, Player{2, 2,}, Player2,}
   // Note: no exit nodes here.
   loops := [][]*PlayNode{
     []*PlayNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},

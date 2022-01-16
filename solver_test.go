@@ -6,8 +6,8 @@ import (
 )
 
 func testSolveTreeValid(t *testing.T) {
-  startState := gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  startState := GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
   stateNode, existingStates, leaves, _, solveErr := solve(&startState, 150)
   gps := createGamePlayState(&startState)
@@ -15,7 +15,7 @@ func testSolveTreeValid(t *testing.T) {
     t.Fatal(solveErr.Error())
   } 
   // fmt.Println(existingStates[GameState{
-  //   player{4, 4}, player{2, 2}, Player1,
+  //   Player{4, 4}, Player{2, 2}, Player1,
   // }].toString())
   validateSolveNode(gps, stateNode, make(map[GameState]bool, len(existingStates)), existingStates, leaves, t)
 }
@@ -76,35 +76,35 @@ func validateSolveNode(gps *gamePlayState, node *PlayNode, visitedStates map[Gam
     }
   }
 
-  // Get all legal moves for this game state
+  // Get all legal Moves for this game state
   for _, playerHand := range node.gs.getPlayer().getDistinctPlayableHands() {
     for _, receiverHand := range node.gs.getReceiver().getDistinctPlayableHands() {
-      m := move{playerHand, receiverHand}
+      m := Move{playerHand, receiverHand}
       if node.nextNodes[m] == nil {
-        t.Fatalf("Possible move not in next nodes: %+v, %s", m, node.toString())
+        t.Fatalf("Possible Move not in next nodes: %+v, %s", m, node.toString())
       }
     }
   }
 
-  // For each possilbe move in the node:
+  // For each possilbe Move in the node:
   for nextMove, nextNode := range node.nextNodes {
     // If we've visited this state before, continue
     if visitedStates[*nextNode.gs] {
       continue
     }
 
-    // Check that applying the move to the current node state gives you the state in the next node
-    playState, err := node.gs.copyAndPlayTurn(nextMove.PlayerHand, nextMove.receiverHand) 
+    // Check that applying the Move to the current node state gives you the state in the next node
+    playState, err := node.gs.copyAndPlayTurn(nextMove.PlayerHand, nextMove.ReceiverHand) 
     if err != nil {
       t.Fatal(err.Error())
     }
     // Normalize in place
     playState.normalize()
     if !playState.equals(nextNode.gs) {
-      t.Fatalf("Normalized play state does not match node state after move: play state: %+v, node state: %+v, move: %+v", *playState, *nextNode.gs, nextMove)
+      t.Fatalf("Normalized play state does not match node state after Move: play state: %+v, node state: %+v, Move: %+v", *playState, *nextNode.gs, nextMove)
     }
 
-    // Apply the normalized move to our gps and recurse
+    // Apply the normalized Move to our gps and recurse
     nextGps := gps.deepCopy()
     nextGps.playNormalizedTurn(nextMove)
     validateSolveNode(nextGps, nextNode, visitedStates, existingStates, leaves, t)
@@ -141,29 +141,29 @@ func testBestMoves(stateNode *PlayNode, t *testing.T) {
 
     node, ok := curNode.nextNodes[bestMove]
     if !ok {
-      t.Fatalf("Best move not found in node states: %+v, %s", bestMove, curNode.toTreeString(1))
+      t.Fatalf("Best Move not found in node states: %+v, %s", bestMove, curNode.toTreeString(1))
     }
-    fmt.Printf("Previous node: %s,\nBest move: %+v,\nNext node: %p, %s\n\n", curNode.toString(), bestMove, node, node.toString())
+    fmt.Printf("Previous node: %s,\nBest Move: %+v,\nNext node: %p, %s\n\n", curNode.toString(), bestMove, node, node.toString())
     curNode = node
   }
   if gameResult != expectedGameResult {
     t.Fatalf("Game did not end as expected: expected result: %v, actual result: %v", expectedGameResult, gameResult)
   }
-  fmt.Printf("Play over after %d moves\n", i)
+  fmt.Printf("Play over after %d Moves\n", i)
 
   if gameResult == Player1Wins {
     fmt.Println("Player 1 wins")
   } else if gameResult == Player2Wins {
     fmt.Println("Player 2 wins")
   } else {
-    fmt.Println("Computer ran out of moves!")
+    fmt.Println("Computer ran out of Moves!")
   }
   fmt.Println("finished TestSolveBestMoves")
 }
 
 func testSolveBestMoves(maxDepth int, t *testing.T) {
-  startState := gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  startState := GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
   stateNode, _, _, _, err := solve(&startState, maxDepth)
   if err != nil {

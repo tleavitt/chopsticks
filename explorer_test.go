@@ -8,8 +8,8 @@ import (
 func testExploreStates(numFingers int8, maxDepth int, t *testing.T) {
   fmt.Println("starting TestExploreStates")
   prevNumFingers := setNumFingers(numFingers)
-  startState := &gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  startState := &GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
   visitedStates := make(map[GameState]*PlayNode, 38)
   startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, maxDepth)
@@ -70,8 +70,8 @@ func TestExploreLoop(t *testing.T) {
   fmt.Println("starting TestExploreLoop")
   prevNumFingers := setNumFingers(5)
 
-  startState := &gameState{
-    player{0, 4}, player{0, 3}, Player1,
+  startState := &GameState{
+    Player{0, 4}, Player{0, 3}, Player1,
   }
   visitedStates := make(map[GameState]*PlayNode, 38)
   startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, 15)
@@ -125,30 +125,30 @@ func expectInvalidGraph(startNode *PlayNode, t *testing.T) {
 
 func TestExploreInvalidGraphParent(t *testing.T) {
   fmt.Println("starting TestInvalidGraphParent")
-  startState := &gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  startState := &GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
-  nextState := &gameState{
-    player{1, 1}, player{1, 2}, Player2,
+  nextState := &GameState{
+    Player{1, 1}, Player{1, 2}, Player2,
   }
   startNode := createPlayNodeCopyGs(startState)
   nextNode := createPlayNodeCopyGs(nextState)
   // Only put one edge between startNode and nextNode
-  startNode.nextNodes[move{Left, Left}] = nextNode
+  startNode.nextNodes[Move{Left, Left}] = nextNode
   expectInvalidGraph(startNode, t)
   fmt.Println("finished TestInvalidGraphParent")
 }
 
 func TestExploreInvalidGraphChild(t *testing.T) {
   fmt.Println("starting TestInvalidGraphChild")
-  grandpa := &gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  grandpa := &GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
-  dad := &gameState{
-    player{1, 1}, player{1, 2}, Player2,
+  dad := &GameState{
+    Player{1, 1}, Player{1, 2}, Player2,
   }
-  son := &gameState{
-    player{0, 1}, player{1, 2}, Player1,
+  son := &GameState{
+    Player{0, 1}, Player{1, 2}, Player1,
   }
   grandpaNode := createPlayNodeCopyGs(grandpa)
   dadNode := createPlayNodeCopyGs(dad)
@@ -156,7 +156,7 @@ func TestExploreInvalidGraphChild(t *testing.T) {
   // Grandpa node does not point to dad node:
   addChildEdge(grandpaNode, dadNode)
 
-  addParentChildEdges(dadNode, sonNode, move{Right, Left})
+  addParentChildEdges(dadNode, sonNode, Move{Right, Left})
 
   // Should detect missing edge starting from son
   expectInvalidGraph(sonNode, t)
@@ -165,23 +165,23 @@ func TestExploreInvalidGraphChild(t *testing.T) {
 
 func TestSolidifyScore(t *testing.T) {
   fmt.Println("starting TestSolidifyScore")
-  gs1 := &gameState{
-    player{1, 1}, player{1, 1}, Player1,
+  gs1 := &GameState{
+    Player{1, 1}, Player{1, 1}, Player1,
   }
-  gs2 := &gameState{
-    player{1, 1}, player{1, 2}, Player2,
+  gs2 := &GameState{
+    Player{1, 1}, Player{1, 2}, Player2,
   }
-  gs3 := &gameState{
-    player{0, 1}, player{1, 2}, Player2,
+  gs3 := &GameState{
+    Player{0, 1}, Player{1, 2}, Player2,
   }
-  gs4 := &gameState{
-    player{0, 1}, player{1, 2}, Player1,
+  gs4 := &GameState{
+    Player{0, 1}, Player{1, 2}, Player1,
   }
-  gs5 := &gameState{
-    player{0, 1}, player{0, 1}, Player2,
+  gs5 := &GameState{
+    Player{0, 1}, Player{0, 1}, Player2,
   }
-  gs6 := &gameState{
-    player{0, 1}, player{0, 0}, Player2,
+  gs6 := &GameState{
+    Player{0, 1}, Player{0, 0}, Player2,
   }
 
   n1 := createPlayNodeCopyGs(gs1)
@@ -192,8 +192,8 @@ func TestSolidifyScore(t *testing.T) {
   n6 := createPlayNodeCopyGs(gs6)
 
   // Add edges
-  m1 := move{Right, Left}
-  m2 := move{Right, Right}
+  m1 := Move{Right, Left}
+  m2 := Move{Right, Right}
 
   addParentChildEdges(n1, n2, m1) 
   addParentChildEdges(n1, n3, m2) 

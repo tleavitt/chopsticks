@@ -67,17 +67,17 @@ func getMoveHandler(solveMap map[GameState]*PlayNode) http.Handler {
             http.Error(w, "can't read body", http.StatusBadRequest)
             return
         }
-        // Get the best move for the current node:
+        // Get the best Move for the current node:
         normalizedComputerMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(DEBUG, true) // TODO: don't allow unscored child?
         if err != nil {
-            log.Printf("Error finding best move for %s", curNode.toString())
+            log.Printf("Error finding best Move for %s", curNode.toString())
             http.Error(w, "can't read body", http.StatusBadRequest)
             return
         }
-        // And translate it into the move the player would see
+        // And translate it into the Move the Player would see
         guiComputerMove, err := gps.playNormalizedTurn(normalizedComputerMove)
 
-        next := &nextStateAndMove{
+        next := &NextStateAndMove{
             *gps.state,
             guiComputerMove,
         }
@@ -93,7 +93,7 @@ func getMoveHandler(solveMap map[GameState]*PlayNode) http.Handler {
         fmt.Printf("Serialized as %s", string(jsonResp))
 
         w.Write(jsonResp)
-        // Send them our move and the new state.
+        // Send them our Move and the new state.
     }
     return http.HandlerFunc(fn)
 }

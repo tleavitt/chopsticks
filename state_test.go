@@ -7,8 +7,8 @@ import (
 
 func TestStateCopy(t *testing.T) {
   fmt.Println("starting TestStateCopy")
-  gs := gameState{
-    player{2, 1}, player{2, 1}, Player1,
+  gs := GameState{
+    Player{2, 1}, Player{2, 1}, Player1,
   }
   gsCopy1 := gs
   gsCopy1.Player1.Lh = 1
