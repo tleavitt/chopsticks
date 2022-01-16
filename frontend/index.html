@@ -253,30 +253,14 @@
         deselectHand(p, "rh");
       }
 
-      let deselectAnimation = null;
-      let deselectCancelled = false;
-
-      function deselectAllAfterTimeout(player1Hand, player2Hand) {
-        deselectAnimation = new Promise((resolve, reject) => {
+      function deselectAllAfterTimeout() {
+        return new Promise((resolve, reject) => {
           setTimeout(() => {
-            if (!deselectCancelled) {
-              deselectHand("p1", player1Hand);
-              deselectHand("p2", player2Hand);
-            }
-            deselectPlayerCancelled = false;
-            deselectAnimation = null;
+            deselectPlayer("p1");
+            deselectPlayer("p2");
             resolve();
           }, 500);
         });
-        return deselectAnimation;
-      }
-
-      function cancelDeselectAnimation() {
-        if (!!deselectAnimation) {
-          deselectCancelled = true;
-          // Deselect the computer.
-          deselectPlayer("p2");
-        }
       }
 
       // For now just select the hand.
@@ -284,8 +268,6 @@
         const elem = document.getElementById(p + h);
 
         elem.addEventListener('click', event => {
-          // Cancel any pending deselect animations
-          cancelDeselectAnimation();
           // If NO hand selected, enable selecting the opponents hand.
           const move = state.move;
           if (!move.getPlayerHand()) {
@@ -311,13 +293,12 @@
           }
           selectReceiverHand(p, h)
           move.setReceiverHand(h)
-          const playerHand = move.getPlayerHand()
           applyMove(state)
-          //
+          // TODO: disable for both players? until computer makes his move?
           disableClicksForPlayer(p)
           // Deselct both players after a timeout
           // TODO: player is always player 1?
-          animationController.enqueueAnimation(() => deselectAllAfterTimeout(playerHand, h));
+          animationController.enqueueAnimation(deselectAllAfterTimeout);
           // submitMove(state.gs);
         });
       }
