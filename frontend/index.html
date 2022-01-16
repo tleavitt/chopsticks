@@ -6,7 +6,7 @@
   <body>
     <div>
       <div id="header">
-        <p>Let's play chopsticks! You go first</p>
+        <p id="header-text">Let's play chopsticks! You go first</p>
       </div>
       <div id="app">
        <div class="container">
@@ -41,8 +41,8 @@
       const NUM_FINGERS = 5
       class Player {
         constructor(lh, rh) {
-          this.Lh = lh;
-          this.Rh = rh;
+          this.lh = lh;
+          this.rh = rh;
         }
         toObj() {
           return {
@@ -70,25 +70,25 @@
         }
       }
 
-      class Selection {
+      class Move {
         constructor() {
-          this.PlayerHand = null;
-          this.ReceiverHand = null;
+          this.playerHand = null;
+          this.receiverHand = null;
         }
 
         getPlayerHand() {
-          return this.PlayerHand;
+          return this.playerHand;
         }
         getReceiverHand() {
-          return this.ReceiverHand;
+          return this.receiverHand;
         }
 
         setPlayerHand(ph) {
-          this.PlayerHand = ph;
+          this.playerHand = ph;
         }
 
         setReceiverHand(rh) {
-          this.ReceiverHand = rh;
+          this.receiverHand = rh;
         }
 
         toObj() {
@@ -101,26 +101,35 @@
 
       // Global state for everything
       class State {
-        constructor(gs, sel) {
+        constructor(gs, move) {
           this.gs = gs;
-          this.sel = sel;
+          this.move = move;
         }
         toObj() {
           return {
             "gs": this.gs,
-            "move": this.sel,
+            "move": this.move,
           }
         }
       }
 
-      class MoveController {
+      class AnimationController {
         constructor() {
-          this.lastPendingMove = null;
+          // Promise which resolves when the last move update completes.
+          this.lastPendingAnimation = Promise.resolve();
         }
-        euqueueMove() {
+        enqueueAnimation(anim) {
+          this.lastPendingAnimation = this.lastPendingAnimation
+            .then((result) => anim());
+        }
 
+        promise() {
+          return this.lastPendingAnimation;
         }
       }
+
+      // Singleton
+      const animationController = new AnimationController()
 
       const FINGERS_TO_X_TRANSLATE_PX = {
         1: 370,
@@ -128,24 +137,51 @@
         3: 0,
         4: -160,
         5: -340,
-      }
+      };
+
+      const IN_PLAY_Y_TRANSLATE_PX = 124;
 
 
       // Controllers
-      function applyMove(gs, sel) {
+      function applyMove(state) {
+        const gs = state.gs
+        const move = state.move
         // Given the current game state and Move,
         // apply the Move to the gamestate and update the UI
         // Returns the new game state
-        Player = gs.T == "p1" ? gs.Player1 : gs.Player2
-        receiver = gs.T == "p1" ? gs.Player2 : gs.Player1
-        receiverStr = invertPlayer(gs.T)
+        const player = gs.T == "p1" ? gs.p1 : gs.p2;
+        const receiver = gs.T == "p1" ? gs.p2 : gs.p1;
+        const receiverStr = invertPlayer(gs.T);
 
-        PlayerHand = Player[sel.getPlayerHand()]
-        receiverHand = receiver[sel.getReceiverHand()]
-        receiver[sel.getReceiverHand()] = (playerHand + receiverHand) % NUM_FINGERS
+        const playerFingers = player[move.getPlayerHand()];
+        const receiverFingers = receiver[move.getReceiverHand()];
+        receiver[move.getReceiverHand()] = (playerFingers + receiverFingers) % NUM_FINGERS;
 
         // Increment the turn
-        gs.T = invertPlayer(gs.T)
+        gs.T = invertPlayer(gs.T);
+
+        // The receive hand needs to be updated to the new value
+        const receiverPh = receiverStr + move.getReceiverHand();
+        const newReceiverFingers = receiver[move.getReceiverHand()]
+
+        setHeaderText(`You played ${move.getPlayerHand()} -> ${move.getReceiverHand()}`)
+        setFingersForHand(receiverPh, newReceiverFingers)
+        // Reset our move.
+        state.move = new Move();
+        return state;
+      }
+
+      function setHeaderText(text) {
+        const header = document.getElementById("header-text")
+        header.innerText = text
+      }
+      function setFingersForHand(ph, fingers) {
+        if (fingers == 0) {
+          // SPEICAL CASE, TODO
+        }
+        const transX = FINGERS_TO_X_TRANSLATE_PX[fingers]
+        const el = document.getElementById(ph);
+        el.style.transform = `translate(${transX}px, ${IN_PLAY_Y_TRANSLATE_PX}px)`
       }
 
       function disableClicksForHand(ph) {
@@ -180,6 +216,13 @@
         }
       }
 
+      function invertHand(h) {
+        if (h === "lh") {
+          return "rh";
+        } else {
+          return "lh";
+        }
+      }
 
       // Highlights the hand green
       function selectPlayerHand(p, h) {
@@ -205,37 +248,77 @@
         img.src = "/static/hands.png"
       }
 
+      function deselectPlayer(p) {
+        deselectHand(p, "lh");
+        deselectHand(p, "rh");
+      }
+
+      let deselectAnimation = null;
+      let deselectCancelled = false;
+
+      function deselectAllAfterTimeout(player1Hand, player2Hand) {
+        deselectAnimation = new Promise((resolve, reject) => {
+          setTimeout(() => {
+            if (!deselectCancelled) {
+              deselectHand("p1", player1Hand);
+              deselectHand("p2", player2Hand);
+            }
+            deselectPlayerCancelled = false;
+            deselectAnimation = null;
+            resolve();
+          }, 500);
+        });
+        return deselectAnimation;
+      }
+
+      function cancelDeselectAnimation() {
+        if (!!deselectAnimation) {
+          deselectCancelled = true;
+          // Deselect the computer.
+          deselectPlayer("p2");
+        }
+      }
 
       // For now just select the hand.
-      function addPlayerClickListener(p, h, sel) {
+      function addPlayerClickListener(p, h, state) {
         const elem = document.getElementById(p + h);
 
         elem.addEventListener('click', event => {
+          // Cancel any pending deselect animations
+          cancelDeselectAnimation();
           // If NO hand selected, enable selecting the opponents hand.
-          if (!sel.getPlayerHand()) {
+          const move = state.move;
+          if (!move.getPlayerHand()) {
             enableClicksForPlayer(invertPlayer(p));
-          } else if (sel.getPlayerHand() !== h) {
-            // If other hand is selected, deselect it.
-            deselectHand(p, sel.getPlayerHand());
-          }
-          selectPlayerHand(p, h)
-          sel.setPlayerHand(h)
+          } 
+          // If other hand is selected, deselect it.
+          deselectHand(p, invertHand(h));
+          selectPlayerHand(p, h);
+          move.setPlayerHand(h);
         });
 
       }
+
 
       function addReceiverClickListener(p, h, state) {
         const elem = document.getElementById(p + h);
 
         elem.addEventListener('click', event => {
-          const sel = state.sel;
-          if (!!sel.getReceiverHand() && sel.getReceiverHand() !== h) {
+          const move = state.move;
+          if (!!move.getReceiverHand() && move.getReceiverHand() !== h) {
             // If other hand is selected, deselect it.
-            deselectHand(p, sel.getReceiverHand());
+            deselectHand(p, move.getReceiverHand());
           }
           selectReceiverHand(p, h)
-          sel.setReceiverHand(h)
-          submitMove(state.gs);
+          move.setReceiverHand(h)
+          const playerHand = move.getPlayerHand()
+          applyMove(state)
+          //
+          disableClicksForPlayer(p)
+          // Deselct both players after a timeout
+          // TODO: player is always player 1?
+          animationController.enqueueAnimation(() => deselectAllAfterTimeout(playerHand, h));
+          // submitMove(state.gs);
         });
       }
 
@@ -262,8 +345,8 @@
 
       // Initialize UI state
       function initUiForPlayer(state) {
-        addPlayerClickListener("p1", "lh", state.sel)
-        addPlayerClickListener("p1", "rh", state.sel)
+        addPlayerClickListener("p1", "lh", state)
+        addPlayerClickListener("p1", "rh", state)
         addReceiverClickListener("p2", "lh", state)
         addReceiverClickListener("p2", "rh", state)
 
@@ -279,8 +362,8 @@
           "p1"
           );
 
-        const sel = new Selection();
-        const state = new State(gs, sel);
+        const move = new Move();
+        const state = new State(gs, move);
 
         initUiForPlayer(state);
 
