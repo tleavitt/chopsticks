@@ -11,19 +11,19 @@ import (
 // These could either be terminal states or require further exploration. We should start at these states when scoring
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
-func exploreStates(startNode *playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
-  return exploreStatesImpl(startNode, []*playNode{startNode}, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth, 0)
+func exploreStates(startNode *PlayNode, visitedStates map[gameState]*PlayNode, maxDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
+  return exploreStatesImpl(startNode, []*PlayNode{startNode}, visitedStates, make(map[*PlayNode][]*PlayNode, 4), make([][]*PlayNode, 0, 4), maxDepth, 0)
 }
 
-func exploreStatesRetryable(startNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
+func exploreStatesRetryable(startNode *PlayNode, curPath []*PlayNode, visitedStates map[gameState]*PlayNode, maxDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
   if INFO {
     fmt.Printf("Exploring state %s\n", startNode.toString())
   }
-  return exploreStatesImpl(startNode, curPath, visitedStates, make(map[*playNode][]*playNode, 4), make([][]*playNode, 0, 4), maxDepth, len(curPath) - 1)
+  return exploreStatesImpl(startNode, curPath, visitedStates, make(map[*PlayNode][]*PlayNode, 4), make([][]*PlayNode, 0, 4), maxDepth, len(curPath) - 1)
 }
 
 // Yes, O(N) search. Whatever, it's probably fine
-func findNodeInPath(node *playNode, path []*playNode) int {
+func findNodeInPath(node *PlayNode, path []*PlayNode) int {
   for i, curNode := range path {
     if node == curNode {
       return i
@@ -33,19 +33,19 @@ func findNodeInPath(node *playNode, path []*playNode) int {
 }
 
 // Egad, go slices are fucking awful
-func copyPath(path []*playNode) []*playNode {
-  newPath := make([]*playNode, len(path)) 
+func copyPath(path []*PlayNode) []*PlayNode {
+  newPath := make([]*PlayNode, len(path)) 
   copy(newPath, path)
   return newPath
 }
 
 type exploreCandidate struct {
-  pn *playNode
+  pn *PlayNode
   moveToPn *move
   heuristic float32
 }
 
-func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, leaves map[*playNode][]*playNode, loops [][]*playNode, maxDepth int, baseDepth int) (*playNode, map[*playNode][]*playNode, [][]*playNode, error) {
+func exploreStatesImpl(curNode *PlayNode, curPath []*PlayNode, visitedStates map[gameState]*PlayNode, leaves map[*PlayNode][]*PlayNode, loops [][]*PlayNode, maxDepth int, baseDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
   // Sanity check: curNode should be the last node of the path
   if curPath[len(curPath) - 1] != curNode {
     return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))
@@ -171,11 +171,11 @@ func exploreStatesImpl(curNode *playNode, curPath []*playNode, visitedStates map
 }
 
 // Explore the game tree and correct any incorrect scores.
-func solidifyScores(startNode *playNode, maxDepth int) bool {
-  return solidifyScoresImpl(startNode, make(map[*playNode]bool, 4), 0, maxDepth)
+func solidifyScores(startNode *PlayNode, maxDepth int) bool {
+  return solidifyScoresImpl(startNode, make(map[*PlayNode]bool, 4), 0, maxDepth)
 }
 
-func solidifyScoresImpl(curNode *playNode, visitedNodes map[*playNode]bool, depth int, maxDepth int) bool {
+func solidifyScoresImpl(curNode *PlayNode, visitedNodes map[*PlayNode]bool, depth int, maxDepth int) bool {
   // Abort after we hit the maximum depth.
   if depth >= maxDepth { 
     return false

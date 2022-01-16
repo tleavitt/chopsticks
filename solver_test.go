@@ -44,8 +44,8 @@ func TestSolveTreeValid5(t *testing.T) {
   fmt.Println("finished TestSolveTreeValid5")
 }
 
-func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gameState]bool, 
-                       existingStates map[gameState]*playNode, leaves map[*playNode][]*playNode, t *testing.T) {
+func validateSolveNode(gps *gamePlayState, node *PlayNode, visitedStates map[gameState]bool, 
+                       existingStates map[gameState]*PlayNode, leaves map[*PlayNode][]*PlayNode, t *testing.T) {
 
   // Test one: our game play state should be valid
   if err := gps.validate(); err != nil {
@@ -60,7 +60,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
     t.Fatalf("Game state not found in visited states map: %+v", *gps.normalizedState)
   }
 
-  // Test two: normalized state should be the same as the playNode state 
+  // Test two: normalized state should be the same as the PlayNode state 
   if !gps.normalizedState.equals(node.gs) {
     t.Fatalf("Normalized play state does not match node state: play state: %+v, node state: %+v", *gps.normalizedState, *node.gs)
   }
@@ -111,7 +111,7 @@ func validateSolveNode(gps *gamePlayState, node *playNode, visitedStates map[gam
   }
 }
 
-func testBestMoves(stateNode *playNode, t *testing.T) {
+func testBestMoves(stateNode *PlayNode, t *testing.T) {
   var i int
   var curNode = stateNode
   expectedGameResult := Ongoing

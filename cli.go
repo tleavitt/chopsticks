@@ -34,7 +34,7 @@ func stringInputToHand(i string) (Hand, error) {
   }
 }
 
-func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *playNode, nodeBeforePlay *playNode, guiMove move, normalizedMove move) error {
+func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *PlayNode, nodeBeforePlay *PlayNode, guiMove move, normalizedMove move) error {
    normalizedAfter := gsAfterPlay.copyAndNormalize()
     if !normalizedAfter.equals(nodeAfterPlay.gs) {
       return errors.New(fmt.Sprintf("Normalized GUI game state and solve tree game state do not match: %+v, %+v", normalizedAfter, nodeAfterPlay.gs))
@@ -45,7 +45,7 @@ func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *playNode, nodeBeforePla
     return nil
 }
 
-func validateGpsAndNode(gps *gamePlayState, curNode *playNode) error {
+func validateGpsAndNode(gps *gamePlayState, curNode *PlayNode) error {
   if !gps.normalizedState.equals(curNode.gs) {
     return errors.New(fmt.Sprintf("GPS normalized state and solve node state do not match: %+v, %+v", gps.normalizedState, curNode.gs))
   } else {
@@ -54,7 +54,7 @@ func validateGpsAndNode(gps *gamePlayState, curNode *playNode) error {
 }
 
 
-func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
+func runPlayerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
   fmt.Println("Your turn.")
   fmt.Println("What would you like to play?")
 
@@ -107,7 +107,7 @@ func runPlayerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
 }
 
 
-func runComputerTurn(gps *gamePlayState, curNode *playNode) (*playNode, error) {
+func runComputerTurn(gps *gamePlayState, curNode *PlayNode) (*PlayNode, error) {
   // Computer move
   // Need to normalize the guiGs in order to map the best move onto the current GUI
   normalizedComputerMove, _, err := curNode.getBestMoveAndScoreForCurrentPlayer(DEBUG, true) // TODO: don't allow unscored child?

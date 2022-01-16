@@ -11,7 +11,7 @@ func testExploreStates(numFingers int8, maxDepth int, t *testing.T) {
   startState := &gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
-  visitedStates := make(map[gameState]*playNode, 38)
+  visitedStates := make(map[gameState]*PlayNode, 38)
   startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, maxDepth)
   if err != nil {
     t.Fatal(err)
@@ -73,7 +73,7 @@ func TestExploreLoop(t *testing.T) {
   startState := &gameState{
     player{0, 4}, player{0, 3}, Player1,
   }
-  visitedStates := make(map[gameState]*playNode, 38)
+  visitedStates := make(map[gameState]*PlayNode, 38)
   startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, 15)
   if err != nil {
     t.Fatal(err)
@@ -115,7 +115,7 @@ func TestExploreLoop(t *testing.T) {
   fmt.Println("finished TestExploreLoop")
 }
 
-func expectInvalidGraph(startNode *playNode, t *testing.T) {
+func expectInvalidGraph(startNode *PlayNode, t *testing.T) {
   var err error
   if _, _, err = startNode.validateEdges(true); err == nil {
     t.Fatal("Expected validateEdges to error on invalid graph, but it did not")

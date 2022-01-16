@@ -9,10 +9,10 @@ import (
 const DEFAULT_MAX_DEPTH int = 150
 const useSimpleScore bool = false
 
-func getShallowestLeaf(leaves map[*playNode][]*playNode) (*playNode, []*playNode) {
+func getShallowestLeaf(leaves map[*PlayNode][]*PlayNode) (*PlayNode, []*PlayNode) {
   minLen := math.MaxInt32
-  var minLeaf *playNode = nil
-  var minPath []*playNode = nil
+  var minLeaf *PlayNode = nil
+  var minPath []*PlayNode = nil
   for pn, path := range leaves {
     if len(path) < minLen {
       minLen = len(path)
@@ -24,7 +24,7 @@ func getShallowestLeaf(leaves map[*playNode][]*playNode) (*playNode, []*playNode
 }
 
 // Generate a play strategy given a starting game state. 
-func solveRetryable(curNode *playNode, curPath []*playNode, visitedStates map[gameState]*playNode, maxDepth int) (*playNode, map[gameState]*playNode, map[*playNode][]*playNode, map[*loopGraph]int, error) {
+func solveRetryable(curNode *PlayNode, curPath []*PlayNode, visitedStates map[gameState]*PlayNode, maxDepth int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, map[*loopGraph]int, error) {
   // Step one: explore all possible states, and identify loops
   root, leaves, loops, err := exploreStatesRetryable(curNode, curPath, visitedStates, maxDepth)
   if err != nil {
@@ -69,12 +69,12 @@ func solveRetryable(curNode *playNode, curPath []*playNode, visitedStates map[ga
 }
 
 type SolveCandidate struct {
-  root *playNode
-  path []*playNode
+  root *PlayNode
+  path []*PlayNode
 }
 
 // TODO: this is probably buggy
-func solveIterative(root *playNode, pathToRoot []*playNode, visitedStates map[gameState]*playNode, maxDepthPerIt int, iterations int) (*playNode, map[gameState]*playNode, map[*playNode][]*playNode, error) {
+func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[gameState]*PlayNode, maxDepthPerIt int, iterations int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, error) {
   solveCandidates := []*SolveCandidate{ &SolveCandidate{root, pathToRoot,} }
 
   for i := 0; i < iterations; i++ {
@@ -124,7 +124,7 @@ func solveIterative(root *playNode, pathToRoot []*playNode, visitedStates map[ga
 
   solidifyScores(root, math.MaxInt32)
   // Leaves are the remaining solve candidates. TODO: this doesn't include terminal leaves, should it?
-  leaves := make(map[*playNode][]*playNode, len(solveCandidates))
+  leaves := make(map[*PlayNode][]*PlayNode, len(solveCandidates))
   for _, solveCandidate := range solveCandidates {
     leaves[solveCandidate.root] = solveCandidate.path
   }
@@ -133,15 +133,15 @@ func solveIterative(root *playNode, pathToRoot []*playNode, visitedStates map[ga
 }
 
 // Generate a play strategy given a starting game state. 
-func solve(gs *gameState, maxDepth int) (*playNode, map[gameState]*playNode, map[*playNode][]*playNode, map[*loopGraph]int, error) {
-  visitedStates := make(map[gameState]*playNode, 10)
+func solve(gs *gameState, maxDepth int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, map[*loopGraph]int, error) {
+  visitedStates := make(map[gameState]*PlayNode, 10)
   startNode := createPlayNodeCopyGs(gs)
-  return solveRetryable(startNode, []*playNode{startNode}, visitedStates, maxDepth)
+  return solveRetryable(startNode, []*PlayNode{startNode}, visitedStates, maxDepth)
 }
 
-func solveWithIteration(gs *gameState, maxDepthPerIt int, iterations int) (*playNode, map[gameState]*playNode, map[*playNode][]*playNode, error) {
-  visitedStates := make(map[gameState]*playNode, 10)
+func solveWithIteration(gs *gameState, maxDepthPerIt int, iterations int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, error) {
+  visitedStates := make(map[gameState]*PlayNode, 10)
   startNode := createPlayNodeCopyGs(gs)
-  startPath := []*playNode{startNode}
+  startPath := []*PlayNode{startNode}
   return solveIterative(startNode, startPath, visitedStates, maxDepthPerIt, iterations)
 }

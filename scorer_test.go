@@ -6,11 +6,11 @@ import (
 )
 
 
-func ensureAllNodesScored(root *playNode, t *testing.T) {
+func ensureAllNodesScored(root *PlayNode, t *testing.T) {
   ensureAllNodesScoredImpl(root, t, make(map[gameState]bool))
 }
 
-func ensureAllNodesScoredImpl(root *playNode, t *testing.T, visitedStates map[gameState]bool) {
+func ensureAllNodesScoredImpl(root *PlayNode, t *testing.T, visitedStates map[gameState]bool) {
   if visitedStates[*root.gs] {
     return
   }
@@ -46,9 +46,9 @@ func TestScorePropagateScoresSimple(t *testing.T) {
   addParentChildEdges(dadNode, sonNode, move{Right, Left})
 
   // Score
-  leaves := make(map[*playNode][]*playNode, 1)
-  leaves[sonNode] = []*playNode{}
-  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]int)); err != nil {
+  leaves := make(map[*PlayNode][]*PlayNode, 1)
+  leaves[sonNode] = []*PlayNode{}
+  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*PlayNode]int)); err != nil {
     t.Fatal(err.Error())
   }
 
@@ -88,10 +88,10 @@ func TestScorePropagateScoresFork(t *testing.T) {
   addParentChildEdges(twoprime, three, move{Right, Left})
 
   // Score
-  leaves := make(map[*playNode][]*playNode, 1)
-  leaves[three] = []*playNode{}
+  leaves := make(map[*PlayNode][]*PlayNode, 1)
+  leaves[three] = []*PlayNode{}
   // Should require exactly two nodes on the frontier (two and two prime)
-  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*playNode]int)); err != nil {
+  if err := scorePlayGraph(leaves, make(map[*loopGraph]map[*PlayNode]int)); err != nil {
     t.Fatal(err.Error())
   }
 
@@ -134,10 +134,10 @@ func TestScorePropagateScoresLoop1(t *testing.T) {
   addParentChildEdges(threeNode, fourNode, move{Right, Right})
   addParentChildEdges(fourNode, oneNode, move{Right, Right})
 
-  leaves := make(map[*playNode][]*playNode)
+  leaves := make(map[*PlayNode][]*PlayNode)
 
-  loops := [][]*playNode{
-    []*playNode{oneNode, twoNode, threeNode, fourNode},
+  loops := [][]*PlayNode{
+    []*PlayNode{oneNode, twoNode, threeNode, fourNode},
   } 
   loopGraphs := createLoopGraphs(loops) 
   loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
@@ -191,12 +191,12 @@ func TestScorePropagateScoresLoop2(t *testing.T) {
   addParentChildEdges(threeNode, exitNode, move{Right, Left})
   addParentChildEdges(fourNode, oneNode, move{Right, Right})
 
-  leaves := map[*playNode][]*playNode{
-    exitNode: []*playNode{},
+  leaves := map[*PlayNode][]*PlayNode{
+    exitNode: []*PlayNode{},
   }
 
-  loops := [][]*playNode{
-    []*playNode{oneNode, twoNode, threeNode, fourNode},
+  loops := [][]*PlayNode{
+    []*PlayNode{oneNode, twoNode, threeNode, fourNode},
   } 
   loopGraphs := createLoopGraphs(loops) 
   loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
@@ -276,15 +276,15 @@ func TestScorePropagateScoresComplex(t *testing.T) {
   addParentChildEdges(dadNode, sisNode, move{Left, Right})
   addParentChildEdges(dadNode, sis2Node, move{Right, Left})
 
-  leaves := map[*playNode][]*playNode{
-    broNode: []*playNode{},
-    sisNode: []*playNode{},
-    sis2Node: []*playNode{},
-    exitNode: []*playNode{},
+  leaves := map[*PlayNode][]*PlayNode{
+    broNode: []*PlayNode{},
+    sisNode: []*PlayNode{},
+    sis2Node: []*PlayNode{},
+    exitNode: []*PlayNode{},
   }
 
-  loops := [][]*playNode{
-    []*playNode{oneNode, twoNode, threeNode, fourNode},
+  loops := [][]*PlayNode{
+    []*PlayNode{oneNode, twoNode, threeNode, fourNode},
   } 
   loopGraphs := createLoopGraphs(loops) 
   loopGraphsToExitNodes := getAllExitNodes(loopGraphs)
@@ -299,12 +299,12 @@ func TestScorePropagateScoresComplex(t *testing.T) {
 }
 
 
-func createSimpleLoop() [][]*playNode {
+func createSimpleLoop() [][]*PlayNode {
   gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
   gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
   // Note: no exit nodes here.
-  loops := [][]*playNode{
-    []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
+  loops := [][]*PlayNode{
+    []*PlayNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
   } 
   return loops
 }
@@ -315,7 +315,7 @@ func TestScoreSimpleLoop(t *testing.T) {
   loops := createSimpleLoop()
   distinctLoopGraphs := createLoopGraphs(loops) 
   loopGraphsToExitNodes := getAllExitNodes(distinctLoopGraphs)
-  if err := scorePlayGraph(make(map[*playNode][]*playNode), loopGraphsToExitNodes); err != nil {
+  if err := scorePlayGraph(make(map[*PlayNode][]*PlayNode), loopGraphsToExitNodes); err != nil {
     t.Fatal(err.Error())
   }
   for _, loop := range loops {

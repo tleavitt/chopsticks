@@ -9,10 +9,10 @@ func TestLoopsSimple(t *testing.T) {
   fmt.Println("starting TestSimpleLoops")
   gs1 := &gameState{player{1, 1,}, player{1, 2,}, Player1,}
   gs2 := &gameState{player{1, 1,}, player{2, 2,}, Player2,}
-  loops := [][]*playNode{
-    []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1)},
-    []*playNode{createPlayNodeCopyGs(gs2), createPlayNodeCopyGs(gs2)},
-    []*playNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
+  loops := [][]*PlayNode{
+    []*PlayNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs1)},
+    []*PlayNode{createPlayNodeCopyGs(gs2), createPlayNodeCopyGs(gs2)},
+    []*PlayNode{createPlayNodeCopyGs(gs1), createPlayNodeCopyGs(gs2)},
   } 
   distinctLoopGraphs := createLoopGraphs(loops) 
   for lg, _ := range distinctLoopGraphs {
@@ -73,10 +73,10 @@ func TestLoopsInterlinked(t *testing.T) {
   pn33 := createPlayNodeCopyGs(gs)
   pn34 := createPlayNodeCopyGs(gs)
 
-  loops := [][]*playNode{
-    []*playNode{pn11, pn12, commonNode1, pn14},
-    []*playNode{commonNode1, pn22, pn23, commonNode2},
-    []*playNode{pn31, commonNode2, pn33, pn34},
+  loops := [][]*PlayNode{
+    []*PlayNode{pn11, pn12, commonNode1, pn14},
+    []*PlayNode{commonNode1, pn22, pn23, commonNode2},
+    []*PlayNode{pn31, commonNode2, pn33, pn34},
   } 
 
   fmt.Println(len(loops))

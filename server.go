@@ -10,9 +10,9 @@ import (
     "encoding/json"
 )
 
-type nextStateAndMove struct {
-    nextState gameState
-    m move
+type NextStateAndMove struct {
+    NextState GameState
+    M Move
 }
 
 func getImageRequestHandler(path string) http.Handler {
@@ -42,7 +42,7 @@ func getHomeHandler(_ *gameState) http.Handler {
     return http.HandlerFunc(fn)
 }
 
-func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
+func getMoveHandler(solveMap map[gameState]*PlayNode) http.Handler {
     fn := func (w http.ResponseWriter, r *http.Request) {
         body, err := ioutil.ReadAll(r.Body)
         if err != nil {
@@ -52,6 +52,7 @@ func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
         }
         gs, err := parseUiMove(body)
         if err != nil {
+            fmt.Printf("ERROR PARSING JSON: " + err.Error())
             w.WriteHeader(http.StatusBadRequest)
             return
         }
@@ -76,22 +77,28 @@ func getMoveHandler(solveMap map[gameState]*playNode) http.Handler {
         // And translate it into the move the player would see
         guiComputerMove, err := gps.playNormalizedTurn(normalizedComputerMove)
 
-        next := nextStateAndMove{
+        next := &nextStateAndMove{
             *gps.state,
             guiComputerMove,
         }
 
         w.WriteHeader(http.StatusOK)
         w.Header().Set("Content-Type", "application/json")
-        jsonResp, _ := json.Marshal(next) 
+        jsonResp, err := json.Marshal(next) 
+        if err != nil {
+            log.Printf("Error parsing json %s", err)
+            http.Error(w, "can't read body", http.StatusBadRequest)
+            return
+        }
+        fmt.Printf("Serialized as %s", string(jsonResp))
+
         w.Write(jsonResp)
         // Send them our move and the new state.
-        fmt.Fprintf(w, "%s", body)
     }
     return http.HandlerFunc(fn)
 }
 
-func serve(initGs *gameState, solveMap map[gameState]*playNode) {
+func serve(initGs *gameState, solveMap map[gameState]*PlayNode) {
     r := mux.NewRouter()
     r.Handle("/", getHomeHandler(initGs))
     r.Handle("/static/hands.png", getImageRequestHandler("./frontend/static/hands.png"))

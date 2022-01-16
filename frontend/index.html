@@ -6,28 +6,28 @@
   <body>
     <div>
       <div id="header">
-        <p>Let's play chopsticks. You go first</p>
+        <p>Let's play chopsticks! You go first</p>
       </div>
       <div id="app">
        <div class="container">
           <div class="grid-outer">
             <div id="p2lh-container" class="grid-inner">
-              <img id="p2lh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+              <img id="p2lh" draggable=false src="/static/hands.png" style="transform: translate(370px, 125px)">
             </div>
           </div>
           <div class="grid-outer">
             <div id="p2rh-container" class="grid-inner">
-              <img id="p2rh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+              <img id="p2rh" draggable=false src="/static/hands.png" style="transform: translate(370px, 125px)">
             </div>
           </div>
           <div class="grid-outer">
             <div id="p1lh-container" class="grid-inner">
-              <img id="p1lh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+              <img id="p1lh" draggable=false src="/static/hands.png" style="transform: translate(370px, 125px)">
             </div>
           </div>
           <div class="grid-outer">
             <div id="p1rh-container" class="grid-inner">
-              <img id="p1rh" draggable=false src="/static/hands.png" style="transform: translate(370px, 0px)">
+              <img id="p1rh" draggable=false src="/static/hands.png" style="transform: translate(370px, 125px)">
             </div>
           </div>
         </div> 
@@ -46,8 +46,8 @@
         }
         toObj() {
           return {
-            "lh": this.lh.value,
-            "rh": this.hh.value,
+            "lh": this.lh,
+            "rh": this.rh,
           };
         }
       }
@@ -60,10 +60,13 @@
         } 
         toObj() {
           return {
-            "player1": this.p1.toObj(),
-            "player2": this.p2.toObj(),
+            "p1": this.p1.toObj(),
+            "p2": this.p2.toObj(),
             "turn": this.turn,
           };
+        }
+        toJson() {
+          return JSON.stringify(this.toObj())
         }
       }
 
@@ -108,9 +111,6 @@
             "move": this.sel,
           }
         }
-        toJson() {
-          return JSON.stringify(this.toObj())
-        }
       }
 
       class MoveController {
@@ -122,11 +122,12 @@
         }
       }
 
-      const FINGERS_TO_X_TRANSLATE_PX {
+      const FINGERS_TO_X_TRANSLATE_PX = {
         1: 370,
         2: 200,
         3: 0,
-        4
+        4: -160,
+        5: -340,
       }
 
 
@@ -234,12 +235,12 @@
           }
           selectReceiverHand(p, h)
           sel.setReceiverHand(h)
-          submitMove(state);
+          submitMove(state.gs);
         });
       }
 
       // Example POST method implementation:
-      async function postData(url, data) {
+      async function postData(url, body) {
         // Default options are marked with *
         const response = await fetch(url, {
           method: 'POST', // *GET, POST, PUT, DELETE, etc.
@@ -248,13 +249,13 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(data) // body data type must match "Content-Type" header
+          body, // body data type must match "Content-Type" header
         });
         return response.json(); // parses JSON response into native JavaScript objects
       }
 
-      function submitMove(state) {
-        postData("/move", state.toJson()).then(resp => {
+      function submitMove(gs) {
+        postData("/move", gs.toJson()).then(resp => {
           console.log("Got response: " + resp);
         })
       }
@@ -276,7 +277,7 @@
           new Player( 1, 1),
           new Player( 1, 1),
           "p1"
-        );
+          );
 
         const sel = new Selection();
         const state = new State(gs, sel);

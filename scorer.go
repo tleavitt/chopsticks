@@ -191,12 +191,12 @@ func applyHeuristicScores(lg *loopGraph) {
   }
 }
 
-func isScorable(node *playNode) bool {
+func isScorable(node *PlayNode) bool {
   return !node.isScored && node.allChildrenAreScored()
   // return node.allChildrenAreScored()
 }
 
-func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) error {
+func enqueueScorableParents(scorableFrontier *DumbQueue, node *PlayNode) error {
   // Assume node has been scored; 
   // enqueue all parents of node that are now scorable (i.e. they are not scored but all their children are scored)
   // Note: loop nodes are never scorable in this sense; they should never be on the scorable frontier
@@ -214,8 +214,8 @@ func enqueueScorableParents(scorableFrontier *DumbQueue, node *playNode) error {
 }
 
 
-func updateStateForScoredNode(curNode *playNode, scorableFrontier *DumbQueue, 
-    remainingExitNodes map[*loopGraph]map[*playNode]int, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
+func updateStateForScoredNode(curNode *PlayNode, scorableFrontier *DumbQueue, 
+    remainingExitNodes map[*loopGraph]map[*PlayNode]int, exitNodesToLoopGraph map[*PlayNode][]*loopGraph) error {
 
   // Check if this is an exit node, and update the remainingExitNodes map if so.
   if lgs, ok := exitNodesToLoopGraph[curNode]; ok {
@@ -238,7 +238,7 @@ func updateStateForScoredNode(curNode *playNode, scorableFrontier *DumbQueue,
 
 
 // Handle enqueueing scorable parents of a loop after the loop has been scored.
-func enqueueScorableParentsOfLoop(lg *loopGraph, scorableFrontier *DumbQueue, remainingExitNodes map[*loopGraph]map[*playNode]int, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
+func enqueueScorableParentsOfLoop(lg *loopGraph, scorableFrontier *DumbQueue, remainingExitNodes map[*loopGraph]map[*PlayNode]int, exitNodesToLoopGraph map[*PlayNode][]*loopGraph) error {
   for i, ln := 0, lg.head; i < lg.size; i, ln = i+1, ln.nextNode {
     pn := ln.pn
     // Invariant: all loop nodes should be scored when we try this.
@@ -253,26 +253,26 @@ func enqueueScorableParentsOfLoop(lg *loopGraph, scorableFrontier *DumbQueue, re
   return nil
 }
 
-func playNodeToString(pi interface{}) string {
-  pn := pi.(*playNode)
+func PlayNodeToString(pi interface{}) string {
+  pn := pi.(*PlayNode)
   return pn.toString()
 }
 
 // Type safe enqueue/dequeue
-func enqueuePlayNode(dq *DumbQueue, ln *playNode) {
+func enqueuePlayNode(dq *DumbQueue, ln *PlayNode) {
   dq.enqueue(ln)
 }
 
-func dequeuePlayNode(dq *DumbQueue) (*playNode, error) {
+func dequeuePlayNode(dq *DumbQueue) (*PlayNode, error) {
   pn, err := dq.dequeue()
   if err != nil {
     return nil, err
   }
-  return pn.(*playNode), nil
+  return pn.(*PlayNode), nil
 }
 
-func scoreNodeAndUpdateState(curNode *playNode, scorableFrontier *DumbQueue, 
-    remainingExitNodes map[*loopGraph]map[*playNode]int, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
+func scoreNodeAndUpdateState(curNode *PlayNode, scorableFrontier *DumbQueue, 
+    remainingExitNodes map[*loopGraph]map[*PlayNode]int, exitNodesToLoopGraph map[*PlayNode][]*loopGraph) error {
     // Nodes on the scorable frontier must be scorable. If they're not, they might have been enqueued twice,
     // so drop them
     if !isScorable(curNode) {
@@ -297,11 +297,11 @@ func scoreNodeAndUpdateState(curNode *playNode, scorableFrontier *DumbQueue,
 // Idea: loop over the scorable frontier until it's empty. At that point, we've scored all the nodes that we can without
 // processing loops. Therefore there should be some loops that have all exit nodes scored. Score those exit nodes, then
 // put the parents of the loop onto the scorable frontier, and repeat.
-func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGraph]map[*playNode]int, exitNodesToLoopGraph map[*playNode][]*loopGraph) error {
+func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGraph]map[*PlayNode]int, exitNodesToLoopGraph map[*PlayNode][]*loopGraph) error {
   // Drain the scorable frontier
   for loopCount := 0; scorableFrontier.size > 0; loopCount++ {
     if loopCount > 10000 {
-      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + scorableFrontier.toString(playNodeToString))
+      return errors.New("maxLoopCount exceeded, possible error in BFS graph. Frontier: %s" + scorableFrontier.toString(PlayNodeToString))
     }
     curNode, err := dequeuePlayNode(scorableFrontier)
     if err != nil {
@@ -313,12 +313,12 @@ func propagateScores(scorableFrontier *DumbQueue, remainingExitNodes map[*loopGr
   }
   // Sanity check: we should have drained the scorable frontier now.
   if !scorableFrontier.isEmpty() {
-    return errors.New(fmt.Sprintf("Scorable frontier is not empty after score propagation: %s", scorableFrontier.toString(playNodeToString)))
+    return errors.New(fmt.Sprintf("Scorable frontier is not empty after score propagation: %s", scorableFrontier.toString(PlayNodeToString)))
   }
   return nil
 }
 
-func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]map[*playNode]int) map[*loopGraph]bool {
+func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]map[*PlayNode]int) map[*loopGraph]bool {
   unscoredLoopGraphs := make(map[*loopGraph]bool, len(loopGraphs))
   for lg, _ := range loopGraphs {
     unscoredLoopGraphs[lg] = true
@@ -326,7 +326,7 @@ func createUnscoredLoopGraphMap(loopGraphs map[*loopGraph]map[*playNode]int) map
   return unscoredLoopGraphs
 }
 
-func getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs map[*loopGraph]bool, loopsToUnscoredExitNodes map[*loopGraph]map[*playNode]int) []*loopGraph {
+func getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs map[*loopGraph]bool, loopsToUnscoredExitNodes map[*loopGraph]map[*PlayNode]int) []*loopGraph {
   minUnscoredExitNodes := math.MaxInt32 
   returnLoops := []*loopGraph{}
   for lg, _ := range unscoredLoopGraphs {
@@ -341,7 +341,7 @@ func getLoopsWithFewestUnscoredExitNodes(unscoredLoopGraphs map[*loopGraph]bool,
   return returnLoops
 }
 
-func scorePlayGraph(leaves map[*playNode][]*playNode, loopsToExitNodes map[*loopGraph]map[*playNode]int) error {
+func scorePlayGraph(leaves map[*PlayNode][]*PlayNode, loopsToExitNodes map[*loopGraph]map[*PlayNode]int) error {
   // TODO also pass loops?
   // Compute the exit nodes; this map maintains all unscored exit nodes of a loop
   loopsToUnscoredExitNodes := copyLoopsToExitNodes(loopsToExitNodes)
@@ -349,7 +349,7 @@ func scorePlayGraph(leaves map[*playNode][]*playNode, loopsToExitNodes map[*loop
   // Need the inverse map too:
   exitNodesToLoopGraph := invertExitNodesMap(loopsToUnscoredExitNodes) 
   // Keep a running set of nodes that can (definitely?) be scored(?)
-  scorableFrontier := createDumbQueue() // Values are *playNode
+  scorableFrontier := createDumbQueue() // Values are *PlayNode
 
   // First, score the leaves and enqueue scorable nodes onto the scorable frontier. 
   for leaf, _ := range leaves {
@@ -377,7 +377,7 @@ func scorePlayGraph(leaves map[*playNode][]*playNode, loopsToExitNodes map[*loop
   maxLoopCount := 2 * len(unscoredLoopGraphs)
   for loopCount := 0; !scorableFrontier.isEmpty() || len(unscoredLoopGraphs) > 0; loopCount++ {
     if loopCount > maxLoopCount {
-      return errors.New("maxLoopCount exceeded in scoring iteration, frontier: " + scorableFrontier.toString(playNodeToString))
+      return errors.New("maxLoopCount exceeded in scoring iteration, frontier: " + scorableFrontier.toString(PlayNodeToString))
     }
     if DEBUG {
       fmt.Printf("scorePlayGraph: loop count %d, frontier size %d, unscoredLoopGraphs size %d\n", loopCount, scorableFrontier.size, len(unscoredLoopGraphs))
@@ -418,7 +418,7 @@ func scorePlayGraph(leaves map[*playNode][]*playNode, loopsToExitNodes map[*loop
 
 // Instead of doing fancy loop detection, just give all loop nodes a heuristic score off the bat,
 // then to a score solidification down to the leaves. 
-func simpleScore(root *playNode, loopGraphs map[*loopGraph]int, maxDepth int) error {
+func simpleScore(root *PlayNode, loopGraphs map[*loopGraph]int, maxDepth int) error {
   for lg, _ := range loopGraphs {
     applyHeuristicScores(lg)  
   }
