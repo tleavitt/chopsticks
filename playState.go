@@ -6,8 +6,8 @@ import (
 )
 
 type gamePlayState struct {
-	state *gameState
-	normalizedState *gameState
+	state *GameState
+	normalizedState *GameState
 }
 
 func (gps *gamePlayState) deepCopy() *gamePlayState {
@@ -28,7 +28,7 @@ func (gps *gamePlayState) validate() error{
 	}
 }
 
-func createGamePlayState(state *gameState) *gamePlayState {
+func createGamePlayState(state *GameState) *gamePlayState {
 	return &gamePlayState{
 		state, state.copyAndNormalize(),
 	}
@@ -42,7 +42,7 @@ func validateGameAndNormPlayers(gamePlayer player, normalizedPlayer player) erro
 	if gamePlayer.isNormalized() && !gamePlayer.equals(&normalizedPlayer) {
 		return errors.New(fmt.Sprintf("gamePlayer (normalized) and normalizedPlayer are not synchronized: %+v, %+v", gamePlayer, normalizedPlayer))
 	}
-	if !gamePlayer.isNormalized() && (gamePlayer.lh != normalizedPlayer.rh || gamePlayer.rh != normalizedPlayer.lh) {
+	if !gamePlayer.isNormalized() && (gamePlayer.Lh != normalizedPlayer.Rh || gamePlayer.Rh != normalizedPlayer.Lh) {
 		return errors.New(fmt.Sprintf("gamePlayer and normalizedPlayer are not synchronized: %+v, %+v", gamePlayer, normalizedPlayer))
 	}
 	return nil
@@ -58,7 +58,7 @@ func getNormalizedHandForGameMoveAndPlayers(moveHand Hand, gamePlayer player, no
 	// Two steps to denormalizing the move:
 	// If both player's hands are equal return Left -- Left and right are equivalent in this case. Normalized moves always
 	// use left and game moves can use either.
-	if gamePlayer.lh == gamePlayer.rh {
+	if gamePlayer.Lh == gamePlayer.Rh {
 		return Left, nil
 	} else {
 		// if the game player and normalized player are not the same, swap the hand. We know that the hand had to get swapped to get here.
@@ -80,7 +80,7 @@ func getGameHandForNormalizedMoveAndPlayers(moveHand Hand, gamePlayer player, no
 
 
 func (gps *gamePlayState) getNormalizedMoveForGameMove(gameMove move) (move, error) {
-	normalizedPlayerHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.playerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
+	normalizedPlayerHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.PlayerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
 	if err != nil { return gameMove, err }
 	normalizedReceiverHand, err := getNormalizedHandForGameMoveAndPlayers(gameMove.receiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
 	if err != nil { return gameMove, err }
@@ -89,7 +89,7 @@ func (gps *gamePlayState) getNormalizedMoveForGameMove(gameMove move) (move, err
 
 // TODO: DRY?
 func (gps *gamePlayState) getGameMoveForNormalizedMove(normalizedMove move) (move, error) {
-	gamePlayerHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.playerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
+	gamePlayerHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.PlayerHand, *gps.state.getPlayer(), *gps.normalizedState.getPlayer())
 	if err != nil { return normalizedMove, err }
 	gameReceiverHand, err := getGameHandForNormalizedMoveAndPlayers(normalizedMove.receiverHand, *gps.state.getReceiver(), *gps.normalizedState.getReceiver())
 	if err != nil { return normalizedMove, err }

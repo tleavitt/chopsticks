@@ -24,7 +24,7 @@ func (bn *bestNode) update(score float32, ln *loopNode) {
 
 func applyScore(bn *bestNode) {
   pn := bn.node.pn
-  pn.score = turnToSign(pn.gs.turn) * bn.score
+  pn.score = turnToSign(pn.gs.T) * bn.score
   pn.isScored = true
 }
 
@@ -62,7 +62,7 @@ func findMostWinningNodes(lg *loopGraph) (*bestNode, *bestNode, error) {
       return nil, nil, err
     }
 
-    if curNode.pn.gs.turn == Player1 {
+    if curNode.pn.gs.T == Player1 {
       bestPlayer1.update(curScore, curNode)
     } else {
       bestPlayer2.update(curScore, curNode)
@@ -141,7 +141,7 @@ func scoreLoop(lg *loopGraph) error {
         return err
       }
       var mostWinningScore float32 = 2
-      if curPlayNode.gs.turn == Player1 {
+      if curPlayNode.gs.T == Player1 {
         if b1.node != nil {
           mostWinningScore = b1.score
         }
@@ -159,7 +159,7 @@ func scoreLoop(lg *loopGraph) error {
       }
 
       if maxChildScoreCurPlayer >= mostWinningScore || maxChildScoreCurPlayer > 0.9 {
-        curPlayNode.score = turnToSign(curPlayNode.gs.turn) * maxChildScoreCurPlayer
+        curPlayNode.score = turnToSign(curPlayNode.gs.T) * maxChildScoreCurPlayer
         curPlayNode.isScored = true
         if DEBUG {
           fmt.Printf("Scored loop node based on max child score: %+v\n", curPlayNode)

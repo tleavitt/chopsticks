@@ -11,7 +11,7 @@ func TestStateCopy(t *testing.T) {
     player{2, 1}, player{2, 1}, Player1,
   }
   gsCopy1 := gs
-  gsCopy1.player1.lh = 1
+  gsCopy1.Player1.Lh = 1
   if gsCopy1.equals(&gs) {
     t.Fatalf("States are equal when they should differ: %+v, %+v", gsCopy1, gs)
   }

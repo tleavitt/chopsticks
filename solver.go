@@ -24,7 +24,7 @@ func getShallowestLeaf(leaves map[*PlayNode][]*PlayNode) (*PlayNode, []*PlayNode
 }
 
 // Generate a play strategy given a starting game state. 
-func solveRetryable(curNode *PlayNode, curPath []*PlayNode, visitedStates map[gameState]*PlayNode, maxDepth int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, map[*loopGraph]int, error) {
+func solveRetryable(curNode *PlayNode, curPath []*PlayNode, visitedStates map[GameState]*PlayNode, maxDepth int) (*PlayNode, map[GameState]*PlayNode, map[*PlayNode][]*PlayNode, map[*loopGraph]int, error) {
   // Step one: explore all possible states, and identify loops
   root, leaves, loops, err := exploreStatesRetryable(curNode, curPath, visitedStates, maxDepth)
   if err != nil {
@@ -74,7 +74,7 @@ type SolveCandidate struct {
 }
 
 // TODO: this is probably buggy
-func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[gameState]*PlayNode, maxDepthPerIt int, iterations int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, error) {
+func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[GameState]*PlayNode, maxDepthPerIt int, iterations int) (*PlayNode, map[GameState]*PlayNode, map[*PlayNode][]*PlayNode, error) {
   solveCandidates := []*SolveCandidate{ &SolveCandidate{root, pathToRoot,} }
 
   for i := 0; i < iterations; i++ {
@@ -133,14 +133,14 @@ func solveIterative(root *PlayNode, pathToRoot []*PlayNode, visitedStates map[ga
 }
 
 // Generate a play strategy given a starting game state. 
-func solve(gs *gameState, maxDepth int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, map[*loopGraph]int, error) {
-  visitedStates := make(map[gameState]*PlayNode, 10)
+func solve(gs *GameState, maxDepth int) (*PlayNode, map[GameState]*PlayNode, map[*PlayNode][]*PlayNode, map[*loopGraph]int, error) {
+  visitedStates := make(map[GameState]*PlayNode, 10)
   startNode := createPlayNodeCopyGs(gs)
   return solveRetryable(startNode, []*PlayNode{startNode}, visitedStates, maxDepth)
 }
 
-func solveWithIteration(gs *gameState, maxDepthPerIt int, iterations int) (*PlayNode, map[gameState]*PlayNode, map[*PlayNode][]*PlayNode, error) {
-  visitedStates := make(map[gameState]*PlayNode, 10)
+func solveWithIteration(gs *GameState, maxDepthPerIt int, iterations int) (*PlayNode, map[GameState]*PlayNode, map[*PlayNode][]*PlayNode, error) {
+  visitedStates := make(map[GameState]*PlayNode, 10)
   startNode := createPlayNodeCopyGs(gs)
   startPath := []*PlayNode{startNode}
   return solveIterative(startNode, startPath, visitedStates, maxDepthPerIt, iterations)

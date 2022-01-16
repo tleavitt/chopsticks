@@ -14,10 +14,10 @@ func testSolveTreeValid(t *testing.T) {
   if solveErr != nil {
     t.Fatal(solveErr.Error())
   } 
-  // fmt.Println(existingStates[gameState{
+  // fmt.Println(existingStates[GameState{
   //   player{4, 4}, player{2, 2}, Player1,
   // }].toString())
-  validateSolveNode(gps, stateNode, make(map[gameState]bool, len(existingStates)), existingStates, leaves, t)
+  validateSolveNode(gps, stateNode, make(map[GameState]bool, len(existingStates)), existingStates, leaves, t)
 }
 
 func TestSolveTreeValid3(t *testing.T) {
@@ -44,8 +44,8 @@ func TestSolveTreeValid5(t *testing.T) {
   fmt.Println("finished TestSolveTreeValid5")
 }
 
-func validateSolveNode(gps *gamePlayState, node *PlayNode, visitedStates map[gameState]bool, 
-                       existingStates map[gameState]*PlayNode, leaves map[*PlayNode][]*PlayNode, t *testing.T) {
+func validateSolveNode(gps *gamePlayState, node *PlayNode, visitedStates map[GameState]bool, 
+                       existingStates map[GameState]*PlayNode, leaves map[*PlayNode][]*PlayNode, t *testing.T) {
 
   // Test one: our game play state should be valid
   if err := gps.validate(); err != nil {
@@ -94,7 +94,7 @@ func validateSolveNode(gps *gamePlayState, node *PlayNode, visitedStates map[gam
     }
 
     // Check that applying the move to the current node state gives you the state in the next node
-    playState, err := node.gs.copyAndPlayTurn(nextMove.playerHand, nextMove.receiverHand) 
+    playState, err := node.gs.copyAndPlayTurn(nextMove.PlayerHand, nextMove.receiverHand) 
     if err != nil {
       t.Fatal(err.Error())
     }
@@ -134,7 +134,7 @@ func testBestMoves(stateNode *PlayNode, t *testing.T) {
     if err != nil {
       t.Fatal(err.Error())
     }
-    score := turnToSign(curNode.gs.turn) * scoreForCurrentPlayer
+    score := turnToSign(curNode.gs.T) * scoreForCurrentPlayer
     if score != curNode.score {
       t.Fatalf("Best score does not match node score: %f, %s", score, curNode.toString())
     }

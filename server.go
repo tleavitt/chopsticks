@@ -30,7 +30,7 @@ func getImageRequestHandler(path string) http.Handler {
     return http.HandlerFunc(fn)
 }
 
-func getHomeHandler(_ *gameState) http.Handler {
+func getHomeHandler(_ *GameState) http.Handler {
     fn := func (w http.ResponseWriter, r *http.Request) {
         fmt.Printf("serving request %+v\n", r)
         body, err := os.ReadFile("frontend/index.html")
@@ -42,7 +42,7 @@ func getHomeHandler(_ *gameState) http.Handler {
     return http.HandlerFunc(fn)
 }
 
-func getMoveHandler(solveMap map[gameState]*PlayNode) http.Handler {
+func getMoveHandler(solveMap map[GameState]*PlayNode) http.Handler {
     fn := func (w http.ResponseWriter, r *http.Request) {
         body, err := ioutil.ReadAll(r.Body)
         if err != nil {
@@ -98,7 +98,7 @@ func getMoveHandler(solveMap map[gameState]*PlayNode) http.Handler {
     return http.HandlerFunc(fn)
 }
 
-func serve(initGs *gameState, solveMap map[gameState]*PlayNode) {
+func serve(initGs *GameState, solveMap map[GameState]*PlayNode) {
     r := mux.NewRouter()
     r.Handle("/", getHomeHandler(initGs))
     r.Handle("/static/hands.png", getImageRequestHandler("./frontend/static/hands.png"))

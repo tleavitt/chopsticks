@@ -41,13 +41,13 @@
       const NUM_FINGERS = 5
       class Player {
         constructor(lh, rh) {
-          this.lh = lh;
-          this.rh = rh;
+          this.Lh = lh;
+          this.Rh = rh;
         }
         toObj() {
           return {
-            "lh": this.lh,
-            "rh": this.rh,
+            "lh": this.Lh,
+            "rh": this.Rh,
           };
         }
       }
@@ -56,13 +56,13 @@
         constructor(p1, p2, turn) {
           this.p1 = p1;
           this.p2 = p2;
-          this.turn = turn;
+          this.T = turn;
         } 
         toObj() {
           return {
             "p1": this.p1.toObj(),
             "p2": this.p2.toObj(),
-            "turn": this.turn,
+            "turn": this.T,
           };
         }
         toJson() {
@@ -72,19 +72,19 @@
 
       class Selection {
         constructor() {
-          this.playerHand = null;
+          this.PlayerHand = null;
           this.receiverHand = null;
         }
 
         getPlayerHand() {
-          return this.playerHand;
+          return this.PlayerHand;
         }
         getReceiverHand() {
           return this.receiverHand;
         }
 
         setPlayerHand(ph) {
-          this.playerHand = ph;
+          this.PlayerHand = ph;
         }
 
         setReceiverHand(rh) {
@@ -136,16 +136,16 @@
         // Given the current game state and move,
         // apply the move to the gamestate and update the UI
         // Returns the new game state
-        player = gs.turn == "p1" ? gs.player1 : gs.player2
-        receiver = gs.turn == "p1" ? gs.player2 : gs.player1
-        receiverStr = invertPlayer(gs.turn)
+        player = gs.T == "p1" ? gs.Player1 : gs.Player2
+        receiver = gs.T == "p1" ? gs.Player2 : gs.Player1
+        receiverStr = invertPlayer(gs.T)
 
         playerHand = player[sel.getPlayerHand()]
         receiverHand = receiver[sel.getReceiverHand()]
         receiver[sel.getReceiverHand()] = (playerHand + receiverHand) % NUM_FINGERS
 
         // Increment the turn
-        gs.turn = invertPlayer(gs.turn)
+        gs.T = invertPlayer(gs.T)
       }
 
       function disableClicksForHand(ph) {

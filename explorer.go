@@ -11,11 +11,11 @@ import (
 // These could either be terminal states or require further exploration. We should start at these states when scoring
 // the play graph.
 /// OK, fuck breadth first search... go back to dfs but keep the same function signature.
-func exploreStates(startNode *PlayNode, visitedStates map[gameState]*PlayNode, maxDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
+func exploreStates(startNode *PlayNode, visitedStates map[GameState]*PlayNode, maxDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
   return exploreStatesImpl(startNode, []*PlayNode{startNode}, visitedStates, make(map[*PlayNode][]*PlayNode, 4), make([][]*PlayNode, 0, 4), maxDepth, 0)
 }
 
-func exploreStatesRetryable(startNode *PlayNode, curPath []*PlayNode, visitedStates map[gameState]*PlayNode, maxDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
+func exploreStatesRetryable(startNode *PlayNode, curPath []*PlayNode, visitedStates map[GameState]*PlayNode, maxDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
   if INFO {
     fmt.Printf("Exploring state %s\n", startNode.toString())
   }
@@ -45,7 +45,7 @@ type exploreCandidate struct {
   heuristic float32
 }
 
-func exploreStatesImpl(curNode *PlayNode, curPath []*PlayNode, visitedStates map[gameState]*PlayNode, leaves map[*PlayNode][]*PlayNode, loops [][]*PlayNode, maxDepth int, baseDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
+func exploreStatesImpl(curNode *PlayNode, curPath []*PlayNode, visitedStates map[GameState]*PlayNode, leaves map[*PlayNode][]*PlayNode, loops [][]*PlayNode, maxDepth int, baseDepth int) (*PlayNode, map[*PlayNode][]*PlayNode, [][]*PlayNode, error) {
   // Sanity check: curNode should be the last node of the path
   if curPath[len(curPath) - 1] != curNode {
     return nil, nil, nil, errors.New(fmt.Sprintf("current path is invalid, last node should be %+v: %+v", curNode, curPath))

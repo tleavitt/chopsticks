@@ -6,77 +6,77 @@ import (
   "strings"
 )
 
-type gameState struct {
+type GameState struct {
 	// NOTE: don't make these pointers, otherwise copying and keying doesn't work.
-	player1 player
-	player2 player
-turn Turn // Turn indicates who the player is vs the receiver
+	Player1 player
+	Player2 player
+	turn Turn // Turn indicates who the player is vs the receiver
 }
 
-func (gs *gameState) equals(other *gameState) bool {
-	return gs.player1 == other.player1 && gs.player2 == other.player2 && gs.turn == other.turn
+func (gs *GameState) equals(other *GameState) bool {
+	return gs.Player1 == other.Player1 && gs.Player2 == other.Player2 && gs.T == other.T
 }
 
 // Maintain that the player hands are in sorted order (smallest hand first)
-func (gs *gameState) normalize() *gameState {
-  gs.player1.normalize() 
-  gs.player2.normalize() 
+func (gs *GameState) normalize() *GameState {
+  gs.Player1.normalize() 
+  gs.Player2.normalize() 
   return gs
 }
 
-func (gs gameState) copyAndNormalize() *gameState {
+func (gs gameState) copyAndNormalize() *GameState {
 	return gs.normalize()
 }
 
-func (gs *gameState) isNormalized() bool {
-	return gs.player1.lh <= gs.player1.rh && gs.player2.lh <= gs.player2.rh
+func (gs *GameState) isNormalized() bool {
+	return gs.Player1.Lh <= gs.Player1.Rh && gs.Player2.Lh <= gs.Player2.Rh
 }
 
 
-func (gs gameState) copyAndDenormalize(swapPlayer1 bool, swapPlayer2 bool) *gameState {
+func (gs gameState) copyAndDenormalize(swapPlayer1 bool, swapPlayer2 bool) *GameState {
 	if swapPlayer1 {
-		gs.player1.rh, gs.player1.lh = gs.player1.lh, gs.player1.rh
+		gs.Player1.Rh, gs.Player1.Lh = gs.Player1.Lh, gs.Player1.Rh
 	}
 	if swapPlayer2 {
-		gs.player2.rh, gs.player2.lh = gs.player2.lh, gs.player2.rh
+		gs.Player2.Rh, gs.Player2.Lh = gs.Player2.Lh, gs.Player2.Rh
 	}
 	return &gs
 }
 
-func (gs *gameState) getPlayer() *player {
-	if gs.turn == Player1 {
-		return &gs.player1
+func (gs *GameState) getPlayer() *Player {
+	if gs.T == Player1 {
+		return &gs.Player1
 	} else {
-		return &gs.player2		
+		return &gs.Player2		
 	}
 }
 
-func (gs *gameState) getReceiver() *player {
-	if gs.turn == Player1 {
-		return &gs.player2
+func (gs *GameState) getReceiver() *Player {
+	if gs.T == Player1 {
+		return &gs.Player2
 	} else {
-		return &gs.player1		
+		return &gs.Player1		
 	}
 }
 
 // Update the turn variable and swap the players
-func (gs *gameState) incrementTurn() *gameState {
-	if gs.turn == Player1 {
-		 gs.turn = Player2
+func (gs *GameState) incrementTurn() *GameState {
+	if gs.T == Player1 {
+		 gs.T = Player2
 	} else {
-		gs.turn = Player1		
+		gs.T = Player1		
 	}
 	return gs
 }
 
-func (gs *gameState) toString() string {
+func (gs *GameState) toString() string {
 	return fmt.Sprintf("%+v", gs)
 }
 
-func (gs *gameState) prettyString() string {
+func (gs *GameState) prettyString() string {
 	var player1Dec string = "  "
 	var player2Dec string = "  "
-	if gs.turn == Player1 {
+	if gs.T == Player1 {
 		player1Dec = "=>"
 	} else {
 		player2Dec = "=>"
@@ -85,28 +85,28 @@ func (gs *gameState) prettyString() string {
 
 	sb.WriteString("==================================\n")
 	sb.WriteString(fmt.Sprintf("==         %sPlayer 1           ==\n", player1Dec))
-	sb.WriteString(fmt.Sprintf( "==      LH:%d         RH:%d       ==\n", gs.player1.lh, gs.player1.rh))
+	sb.WriteString(fmt.Sprintf( "==      LH:%d         RH:%d       ==\n", gs.Player1.Lh, gs.Player1.Rh))
 	sb.WriteString("==------------------------------==\n")
 	sb.WriteString(fmt.Sprintf("==         %sPlayer 2           ==\n", player2Dec))
-	sb.WriteString(fmt.Sprintf( "==      LH:%d         RH:%d       ==\n", gs.player2.lh, gs.player2.rh))
+	sb.WriteString(fmt.Sprintf( "==      LH:%d         RH:%d       ==\n", gs.Player2.Lh, gs.Player2.Rh))
 	sb.WriteString("==================================\n")
 
 	return sb.String()
 }
 
-func (gs *gameState) prettyPrint() {
+func (gs *GameState) prettyPrint() {
 	fmt.Printf(gs.prettyString())
 }
 
 // Makes a new gameastate
-func (gs *gameState) copyAndPlayTurn(playerHand Hand, receiverHand Hand) (*gameState, error) {
+func (gs *GameState) copyAndPlayTurn(playerHand Hand, receiverHand Hand) (*GameState, error) {
 	gsCopy := *gs
 	result, err := gsCopy.playTurn(playerHand, receiverHand)
 	return result, err
 }
 
 // Note: mutates state
-func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, error) {
+func (gs *GameState) playTurn(playerHand Hand, receiverHand Hand) (*GameState, error) {
 	playerVal := gs.getPlayer().getHand(playerHand)
 	if (playerVal == 0) {
 		return gs, errors.New("illegalMove: attempted to play an eliminated hand")
@@ -127,15 +127,15 @@ func (gs *gameState) playTurn(playerHand Hand, receiverHand Hand) (*gameState, e
 }
 
 // Note: mutates state
-func (gs *gameState) playMove(m move) (*gameState, error) {
-	return gs.playTurn(m.playerHand, m.receiverHand)
+func (gs *GameState) playMove(m move) (*GameState, error) {
+	return gs.playTurn(m.PlayerHand, m.receiverHand)
 }
 
-func (gs *gameState) isMoveValid(m move) bool {
-	return gs.getPlayer().getHand(m.playerHand) != 0 && gs.getReceiver().getHand(m.receiverHand) != 0
+func (gs *GameState) isMoveValid(m move) bool {
+	return gs.getPlayer().getHand(m.PlayerHand) != 0 && gs.getReceiver().getHand(m.receiverHand) != 0
 }
 
-func initGame() *gameState {
+func initGame() *GameState {
 	return &gameState{
 		player{1, 1},	
 		player{1, 1},	

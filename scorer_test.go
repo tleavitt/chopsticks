@@ -7,10 +7,10 @@ import (
 
 
 func ensureAllNodesScored(root *PlayNode, t *testing.T) {
-  ensureAllNodesScoredImpl(root, t, make(map[gameState]bool))
+  ensureAllNodesScoredImpl(root, t, make(map[GameState]bool))
 }
 
-func ensureAllNodesScoredImpl(root *PlayNode, t *testing.T, visitedStates map[gameState]bool) {
+func ensureAllNodesScoredImpl(root *PlayNode, t *testing.T, visitedStates map[GameState]bool) {
   if visitedStates[*root.gs] {
     return
   }

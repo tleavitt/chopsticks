@@ -45,15 +45,15 @@ func interfaceToTurn(turnIf interface{}) (Turn, error) {
     }
 }
 
-func playerFromMap(playerMap map[string]interface{}) (*player, error) {
+func playerFromMap(playerMap map[string]interface{}) (*Player, error) {
     p := player{1, 1}
     if lh, err := getAndCastInt(playerMap, "lh"); err == nil {
-        p.lh = int8(lh);
+        p.Lh = int8(lh);
     } else {
         return nil, err
     }
     if rh, err := getAndCastInt(playerMap, "rh"); err == nil {
-        p.rh = int8(rh);
+        p.Rh = int8(rh);
     } else {
         return nil, err
     }
@@ -62,7 +62,7 @@ func playerFromMap(playerMap map[string]interface{}) (*player, error) {
 
 
 // HOLY MOTHER OF FUCK THIS SUCKSSSSS
-func parseUiMove(jsonBody []byte) (*gameState, error) {
+func parseUiMove(jsonBody []byte) (*GameState, error) {
     var body map[string]interface{}
     if err := json.Unmarshal(jsonBody, &body); err != nil {
         return nil, err
@@ -72,7 +72,7 @@ func parseUiMove(jsonBody []byte) (*gameState, error) {
     gs := initGame()
     if player1Map, err := getAndCastMap(body, "p1"); err == nil {
         if player1, err := playerFromMap(player1Map); err == nil {
-            gs.player1 = *player1
+            gs.Player1 = *Player1
         } else {
             return nil, err
         }
@@ -81,7 +81,7 @@ func parseUiMove(jsonBody []byte) (*gameState, error) {
     }
     if player2Map, err := getAndCastMap(body, "p2"); err == nil {
         if player2, err := playerFromMap(player2Map); err == nil {
-            gs.player2 = *player2
+            gs.Player2 = *Player2
         } else {
             return nil, err
         }
@@ -90,7 +90,7 @@ func parseUiMove(jsonBody []byte) (*gameState, error) {
     }
     if turnIf, ok := body["turn"]; ok {
         if turn, err := interfaceToTurn(turnIf); err == nil {
-            gs.turn = turn
+            gs.T = turn
         } else {
             return nil, err
         }

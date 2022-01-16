@@ -44,50 +44,50 @@ const (
 	Player2 = 2
 )
 
-type player struct {
-    lh int8
-    rh int8
+type Player struct {
+    Lh int8
+    Rh int8
 }
 
-func (p *player) equals(other *player) bool {
-	return p.lh == other.lh && p.rh == other.rh
+func (p *Player) equals(other *Player) bool {
+	return p.Lh == other.Lh && p.Rh == other.Rh
 }
 
 // If necessary swap lh and rh so the lh <= rh, 
 // return True if we swapped and false if not
-func (p *player) normalize() (*player, bool) {
-	if p.lh > p.rh {
-		p.rh, p.lh = p.lh, p.rh	
+func (p *Player) normalize() (*Player, bool) {
+	if p.Lh > p.Rh {
+		p.Rh, p.Lh = p.Lh, p.Rh	
 		return p, true
 	}
 	return p, false
 }
 
-func (p *player) isNormalized() bool {
-	return p.lh <= p.rh
+func (p *Player) isNormalized() bool {
+	return p.Lh <= p.Rh
 }
 
-func (p player) copyAndNormalize() (*player, bool) {
+func (p player) copyAndNormalize() (*Player, bool) {
 	return p.normalize()
 }
 
-func (p *player) isEliminated() bool {
-	return p.lh == 0 && p.rh == 0
+func (p *Player) isEliminated() bool {
+	return p.Lh == 0 && p.Rh == 0
 }
 
-func (p *player) getHand(h Hand) int8 {
+func (p *Player) getHand(h Hand) int8 {
 	if h == Left {
-		return p.lh
+		return p.Lh
 	} else {
-		return p.rh
+		return p.Rh
 	}
 }
 
-func (p *player) setHand(h Hand, value int8) *player {
+func (p *Player) setHand(h Hand, value int8) *Player {
 	if h == Left {
-		p.lh = value
+		p.Lh = value
 	} else {
-		p.rh = value
+		p.Rh = value
 	}
 	return p
 }
@@ -99,12 +99,12 @@ var RIGHT_HAND []Hand = []Hand{Right}
 
 // Returns the distinct hands that a player can use to play
 // WLOG if the player can use (i.e. play or receive) either hand, they always use their left hand.
-func (p *player) getDistinctPlayableHands() []Hand {
+func (p *Player) getDistinctPlayableHands() []Hand {
 	if p.isEliminated() {
 		return []Hand{} // Empty slice, no hands playable 
-	} else if p.lh == 0 {
+	} else if p.Lh == 0 {
 		return RIGHT_HAND
-	} else if p.rh == 0 || p.rh == p.lh {
+	} else if p.Rh == 0 || p.Rh == p.Lh {
 		return LEFT_HAND
 	} else {
 		return DISTINCT_HANDS

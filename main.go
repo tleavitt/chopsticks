@@ -43,7 +43,7 @@ func main() {
                 return err
               }
             }
-            if gps.state.turn == Player1 {
+            if gps.state.T == Player1 {
             // if false {
               stateNode, err = runPlayerTurn(gps, stateNode)  
             } else {

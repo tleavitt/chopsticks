@@ -14,10 +14,10 @@ const (
   Player2Wins
 )
 
-func checkGameResult(gs *gameState) GameResult {
-  if gs.player1.isEliminated() {
+func checkGameResult(gs *GameState) GameResult {
+  if gs.Player1.isEliminated() {
     return Player2Wins
-  } else if gs.player2.isEliminated() {
+  } else if gs.Player2.isEliminated() {
     return Player1Wins
   } else {
     return Ongoing
@@ -34,7 +34,7 @@ func stringInputToHand(i string) (Hand, error) {
   }
 }
 
-func dumpTurnInfo(gsAfterPlay *gameState, nodeAfterPlay *PlayNode, nodeBeforePlay *PlayNode, guiMove move, normalizedMove move) error {
+func dumpTurnInfo(gsAfterPlay *GameState, nodeAfterPlay *PlayNode, nodeBeforePlay *PlayNode, guiMove move, normalizedMove move) error {
    normalizedAfter := gsAfterPlay.copyAndNormalize()
     if !normalizedAfter.equals(nodeAfterPlay.gs) {
       return errors.New(fmt.Sprintf("Normalized GUI game state and solve tree game state do not match: %+v, %+v", normalizedAfter, nodeAfterPlay.gs))

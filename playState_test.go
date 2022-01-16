@@ -12,11 +12,11 @@ func TestGamePlayStateDeepCopy(t *testing.T) {
   }
   gps := createGamePlayState(&gs)
   gps2 := gps.deepCopy()
-  gs.player1.rh = 42
-  if gps.state.player1.rh != 42 {
+  gs.Player1.Rh = 42
+  if gps.state.Player1.Rh != 42 {
     t.Fatalf("Change to player1 not persisted: game state: %+v, game play state %+v", gs, gps.state)
   }
-  if gps2.state.player1.rh != 1 {
+  if gps2.state.Player1.Rh != 1 {
     t.Fatalf("Change to player1 observed in copy: game state: %+v, game play state %+v", gs, gps2.state)
   }
 }

@@ -11,7 +11,7 @@ func testExploreStates(numFingers int8, maxDepth int, t *testing.T) {
   startState := &gameState{
     player{1, 1}, player{1, 1}, Player1,
   }
-  visitedStates := make(map[gameState]*PlayNode, 38)
+  visitedStates := make(map[GameState]*PlayNode, 38)
   startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, maxDepth)
   if err != nil {
     t.Fatal(err)
@@ -24,12 +24,12 @@ func testExploreStates(numFingers int8, maxDepth int, t *testing.T) {
     var prevTurn Turn
     for i, node := range loop {
       if i > 0 {
-        if node.gs.turn == prevTurn {
+        if node.gs.T == prevTurn {
           t.Fatalf("Consecutive loop members have the same turn") 
         }
       }
       fmt.Printf("%s, ", node.gs.toString())
-      prevTurn = node.gs.turn
+      prevTurn = node.gs.T
     }
     fmt.Printf("\n")
   }
@@ -73,7 +73,7 @@ func TestExploreLoop(t *testing.T) {
   startState := &gameState{
     player{0, 4}, player{0, 3}, Player1,
   }
-  visitedStates := make(map[gameState]*PlayNode, 38)
+  visitedStates := make(map[GameState]*PlayNode, 38)
   startNode, leaves, loops, err := exploreStates(createPlayNodeCopyGs(startState), visitedStates, 15)
   if err != nil {
     t.Fatal(err)
@@ -86,12 +86,12 @@ func TestExploreLoop(t *testing.T) {
     var prevTurn Turn
     for i, node := range loop {
       if i > 0 {
-        if node.gs.turn == prevTurn {
+        if node.gs.T == prevTurn {
           t.Fatalf("Consecutive loop members have the same turn") 
         }
       }
       fmt.Printf("%s, ", node.gs.toString())
-      prevTurn = node.gs.turn
+      prevTurn = node.gs.T
     }
     fmt.Printf("\n")
   }
