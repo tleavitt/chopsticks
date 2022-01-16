@@ -39,6 +39,7 @@
     <script>
       // Models
       const NUM_FINGERS = 5
+      // const NUM_FINGERS = 4
       class Player {
         constructor(lh, rh) {
           this.lh = lh;
@@ -264,9 +265,9 @@
       function displayGameOverText(gs) {
         let headerText;
         if (gs.p1.isEliminated()) {
-          headerText = "Game Over! I win!";
+          headerText = "Game over! I win!";
         } else {
-          headerText = "Game Over! You win!";
+          headerText = "Game over! You win!";
         }
         setHeaderText(headerText + " Refresh to play again.")
       }
