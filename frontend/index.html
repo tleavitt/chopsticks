@@ -53,6 +53,9 @@
         equals(other) {
           return !!other && this.lh === other.lh && this.rh === other.rh;
         }
+        isEliminated() {
+          return this.lh === 0 && this.rh === 0;
+        }
       }
 
       class GameState {
@@ -73,6 +76,9 @@
         }
         equals(other) {
           return !!other && other.T === this.T && this.p1.equals(other.p1) && this.p2.equals(other.p2);
+        }
+        isGameOver() {
+          return this.p1.isEliminated() || this.p2.isEliminated();
         }
       }
 
@@ -103,6 +109,10 @@
             "receiverHand": this.getReceiverHand(),
           };
         }
+      }
+
+      function handToPrettyString(hand) {
+        return hand == "lh" ? "left hand" : "right hand";
       }
 
       // Global state for everything
@@ -185,8 +195,8 @@
         // Updates the game state.
         const newReceiverFingers = applyMove(gs, move);
 
-        setHeaderText(`You played ${move.getPlayerHand()} -> ${move.getReceiverHand()}`)
-        setFingersForHand(receiverPh, newReceiverFingers)
+        setHeaderText(`You played ${handToPrettyString(move.getPlayerHand())} => ${handToPrettyString(move.getReceiverHand())}.`);
+        setFingersForHand(receiverPh, newReceiverFingers);
         // Reset our move.
         state.gs = gs; // Technically not necessary, but do it for consistency.
         state.move = new Move();
@@ -213,7 +223,7 @@
       }
 
       async function animateComputerMove(computerP, move, receiverPh, newReceiverFingers) {
-        setHeaderText(`I'll play ${move.getPlayerHand()} -> ${move.getReceiverHand()}`)
+        setHeaderText(`I'll play ${handToPrettyString(move.getPlayerHand())} => ${handToPrettyString(move.getReceiverHand())}.`);
         selectPlayerHand(computerP, move.getPlayerHand());
         await sleep(500);
         // Update the fingers as we highlight the hand.
@@ -244,8 +254,21 @@
         }
       }
 
-      function isEliminated(el) {
+      async function endGame(gs) {
+        await animationController.promise(); 
+        displayGameOverText(gs);
+        disableClicksForPlayer("p1");
+        disableClicksForPlayer("p2");
+      }
 
+      function displayGameOverText(gs) {
+        let headerText;
+        if (gs.p1.isEliminated()) {
+          headerText = "Game Over! I win!";
+        } else {
+          headerText = "Game Over! You win!";
+        }
+        setHeaderText(headerText + " Refresh to play again.")
       }
 
       function disableClicksForHand(ph) {
@@ -334,15 +357,33 @@
         const elem = document.getElementById(p + h);
 
         elem.addEventListener('click', event => {
-          // If NO hand selected, enable selecting the opponents hand.
+          // H is the currently clicked on hand,
+          // state.move holds the current seletion.
+          // Three cases:
+          // Selected a hand with no hand selected.
+          // Clicked on a selected hand
+          // Clicked on a hand with the other hand selected.
           const move = state.move;
-          if (!move.getPlayerHand()) {
+          const curSelectedHand = move.getPlayerHand();
+          if (!curSelectedHand) {
+            // Selected a hand with no hand selected.
+            // Enable clicks for the other player.
             enableClicksForPlayer(state.gs, invertPlayer(p));
-          } 
-          // If other hand is selected, deselect it. (always)
-          deselectHand(p, invertHand(h));
-          selectPlayerHand(p, h);
-          move.setPlayerHand(h);
+            selectPlayerHand(p, h);
+            move.setPlayerHand(h);
+          } else if (curSelectedHand === h) {
+            // Clicked on a selected hand
+            // Deselect it, remove the selection, and disable clicks for the other player.
+            deselectHand(p, h);
+            move.setPlayerHand(null);
+            disableClicksForPlayer(invertPlayer(p));
+          } else {
+            // Clicked on a hand with the other hand selected.
+            // Swap the selection.
+            deselectHand(p, invertHand(h));
+            selectPlayerHand(p, h);
+            move.setPlayerHand(h);
+          }
         });
 
       }
@@ -364,12 +405,23 @@
           disableClicksForPlayer("p2");
           // Deselect both players after a timeout.
           animationController.enqueueAnimation(deselectAllAfterTimeout);
+          // If the game is over, no more moves to make. The player wins!
+          if (state.gs.isGameOver()) {
+            await endGame(state.gs);
+            return;
+          }
+
           // Submit the move to the API and get the computer's response
           const {nextGs, move: computerMove} = await submitMoveAndGetResponse(state.gs);
           // Apply and animate the computer's response
           await applyComputerMove(state, nextGs, computerMove);
           // enable clicks for player 1 again.
-          // TODO: check if game is over here.
+          // If the game is over, no more moves to make. The computer wins!
+          if (state.gs.isGameOver()) {
+            await endGame(state.gs);
+            return;
+          }
+
           enableClicksForPlayer(state.gs, state.gs.T);
           setHeaderText("Your turn.");
         };
