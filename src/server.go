@@ -106,5 +106,5 @@ func serve(initGs *GameState, solveMap map[GameState]*PlayNode) {
     r.Handle("/static/hands_red.png", getImageRequestHandler("./frontend/static/hands_red.png"))
     r.Handle("/move", getMoveHandler(solveMap))
     http.Handle("/", r)
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    log.Fatal(http.ListenAndServe(":8888", nil))
 }

@@ -1,17 +1,17 @@
 build:
-	go build .
+	cd src && go build .
 
 test: build
-	go test
+	cd src && go test
 
 cli:
-	./chopsticks cli
+	./src/chopsticks cli
 
 build-and-cli: build
 	$(MAKE) cli
 
 serve:
-	./chopsticks serve
+	./src/chopsticks serve
 
 build-and-serve: build
 	$(MAKE) serve
